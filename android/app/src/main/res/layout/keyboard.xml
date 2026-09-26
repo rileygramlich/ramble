@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:orientation="vertical" android:background="@color/board"
+    android:paddingHorizontal="10dp" android:paddingTop="10dp" android:paddingBottom="14dp">
+
+    <TextView android:id="@+id/status"
+        android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:gravity="center" android:textColor="@color/ink_soft" android:textSize="14sp"
+        android:paddingBottom="10dp" />
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical">
+
+        <TextView android:id="@+id/globe" style="@style/Key" android:text="🌐" android:contentDescription="Next keyboard" />
+        <TextView android:id="@+id/backspace" style="@style/Key" android:text="⌫" android:contentDescription="Delete" />
+
+        <FrameLayout android:layout_width="0dp" android:layout_height="96dp" android:layout_weight="1.6">
+            <ImageView android:id="@+id/mic"
+                android:layout_width="88dp" android:layout_height="88dp" android:layout_gravity="center"
+                android:background="@drawable/mic" android:src="@drawable/ic_mic" android:scaleType="center"
+                android:elevation="4dp" android:contentDescription="Hold to talk, tap for hands-free" />
+        </FrameLayout>
+
+        <TextView android:id="@+id/space" style="@style/Key" android:text="␣" android:contentDescription="Space" />
+        <TextView android:id="@+id/enter" style="@style/Key" android:text="↵" android:contentDescription="Enter" />
+    </LinearLayout>
+</LinearLayout>

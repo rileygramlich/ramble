@@ -1,0 +1,13 @@
+# fetched by scripts/fetch-deps.sh
+third_party/
+app/src/main/assets/*.bin
+
+.gradle/
+build/
+app/build/
+app/.cxx/
+local.properties
+*.apk
+*.aab
+*.jks
+*.keystore

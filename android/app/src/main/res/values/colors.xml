@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="board">#16181c</color>
+    <color name="key">#2a2d33</color>
+    <color name="key_pressed">#3a3e46</color>
+    <color name="ink">#f1ede4</color>
+    <color name="ink_soft">#a9a397</color>
+    <color name="accent">#ff6b4a</color>
+    <color name="accent_live">#ff3d6e</color>
+</resources>

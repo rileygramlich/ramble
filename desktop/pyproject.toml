@@ -1,0 +1,23 @@
+[project]
+name = "yap"
+version = "0.1.0"
+description = "Private, free, on-device dictation: hold a key, talk, and it types."
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "numpy",
+  "sounddevice",
+  "pynput",
+  "pyperclip",
+  "faster-whisper",
+  "mlx-whisper; sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+[project.scripts]
+yap = "yap.__main__:main"
+
+[dependency-groups]
+dev = ["pytest"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

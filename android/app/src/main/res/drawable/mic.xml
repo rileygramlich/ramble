@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Coral at rest, hot pink while listening. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_activated="true"><shape android:shape="oval"><solid android:color="@color/accent_live"/></shape></item>
+    <item android:state_pressed="true"><shape android:shape="oval"><solid android:color="@color/accent_live"/></shape></item>
+    <item><shape android:shape="oval"><solid android:color="@color/accent"/></shape></item>
+</selector>
