@@ -32,8 +32,12 @@ class Transcriber:
         """Load the model now, so the first dictation isn't the slow one."""
         self(np.zeros(SAMPLE_RATE // 2, dtype=np.float32))
 
-    def __call__(self, audio: np.ndarray) -> str:
+    def __call__(self, audio: np.ndarray, vocabulary: list[str] = ()) -> str:
+        """Extra vocabulary (e.g. sent by the phone) is added to this machine's own."""
         audio = np.asarray(audio, dtype=np.float32).flatten()
+        prompt = self.prompt
+        if vocabulary:
+            prompt = ((self.prompt or "").rstrip(".") + ", " if self.prompt else "") + ", ".join(vocabulary) + "."
         if self.engine == "mlx":
             import mlx_whisper
 
@@ -41,21 +45,21 @@ class Transcriber:
                 audio,
                 path_or_hf_repo=self.model,
                 language=self.language,
-                initial_prompt=self.prompt,
+                initial_prompt=prompt,
                 condition_on_previous_text=False,
             )
             return result["text"].strip()
 
         try:
-            return self._faster_whisper(audio, "auto")
+            return self._faster_whisper(audio, "auto", prompt)
         except RuntimeError as e:
             # An NVIDIA card without the CUDA libraries installed: use the CPU instead.
             if not any(word in str(e).lower() for word in ("cuda", "cublas", "cudnn")):
                 raise
             self._fw = None
-            return self._faster_whisper(audio, "cpu")
+            return self._faster_whisper(audio, "cpu", prompt)
 
-    def _faster_whisper(self, audio: np.ndarray, device: str) -> str:
+    def _faster_whisper(self, audio: np.ndarray, device: str, prompt: str | None) -> str:
         if self._fw is None:
             from faster_whisper import WhisperModel
 
@@ -63,7 +67,7 @@ class Transcriber:
         segments, _ = self._fw.transcribe(
             audio,
             language=self.language,
-            initial_prompt=self.prompt,
+            initial_prompt=prompt,
             vad_filter=True,
             condition_on_previous_text=False,
             beam_size=1,

@@ -16,7 +16,7 @@ import android.widget.TextView;
 /** First-run setup and settings: the steps to turn Yap on (bubble or keyboard), plus tidy-up options. */
 public class SetupActivity extends Activity {
     private Button micStep, bubbleStep, enableStep, switchStep;
-    private EditText url, model, vocabulary;
+    private EditText speech, url, model, vocabulary;
     private Prefs prefs;
 
     @Override
@@ -28,6 +28,7 @@ public class SetupActivity extends Activity {
         bubbleStep = findViewById(R.id.step_bubble);
         enableStep = findViewById(R.id.step_enable);
         switchStep = findViewById(R.id.step_switch);
+        speech = findViewById(R.id.speech_url);
         url = findViewById(R.id.ollama_url);
         model = findViewById(R.id.ollama_model);
         vocabulary = findViewById(R.id.vocabulary);
@@ -37,6 +38,7 @@ public class SetupActivity extends Activity {
         enableStep.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
         switchStep.setOnClickListener(v -> getSystemService(InputMethodManager.class).showInputMethodPicker());
 
+        speech.setText(prefs.speechUrl());
         url.setText(prefs.ollamaUrl());
         model.setText(prefs.ollamaModel());
         vocabulary.setText(prefs.vocabulary());
@@ -57,7 +59,7 @@ public class SetupActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        prefs.save(url.getText().toString(), model.getText().toString(), vocabulary.getText().toString());
+        prefs.save(speech.getText().toString(), url.getText().toString(), model.getText().toString(), vocabulary.getText().toString());
     }
 
     @Override

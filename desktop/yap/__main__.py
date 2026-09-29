@@ -3,6 +3,7 @@
   yap              run it (hold the hotkey to talk)
   yap file AUDIO   transcribe and tidy an audio file, and print the result
   yap check        test the microphone, the model, and Ollama
+  yap serve [HOST] transcribe and tidy audio for the phone (see serve.py)
   yap init         write an example config to ~/.config/yap/config.toml
 """
 from __future__ import annotations
@@ -30,6 +31,9 @@ def main(argv: list[str] = sys.argv[1:]) -> None:
         started = time.monotonic()
         raw, text = Pipeline(config).run(read_audio(argv[1]))
         print(f"raw:   {raw}\ntext:  {text}\ntook:  {time.monotonic() - started:.1f}s")
+    elif command == "serve" and len(argv) <= 2:
+        from .serve import serve
+        serve(config, argv[1] if len(argv) == 2 else config.serve_host, config.serve_port)
     elif command == "check":
         check(config)
     elif command == "init":

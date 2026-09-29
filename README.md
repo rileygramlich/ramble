@@ -17,8 +17,8 @@ key, speak, let go, and tidy text appears wherever your cursor is.
 | | Mac (`desktop/`) | Android (`android/`) |
 |---|---|---|
 | How you use it | Hold **Right Option ⌥**, talk, let go and it pastes. Tap for hands-free. | A floating mic bubble over your normal keyboard: tap, talk, tap again and it types. Or use Yap as a voice keyboard. |
-| Speech model | `whisper-large-v3-turbo` on Apple's MLX | `ggml-base.en-q5_1` in whisper.cpp, bundled (57 MB) |
-| Tidy-up model | Ollama on the Mac | Ollama on Art over Tailscale; otherwise rules only |
+| Speech model | `whisper-large-v3-turbo` on Apple's MLX | `large-v3-turbo` on Art over Tailscale; away from home `ggml-base.en-q5_1` on the phone (57 MB, bundled) |
+| Tidy-up model | Ollama on the Mac | On Art with the speech, over Tailscale; otherwise rules only |
 
 ## Mac
 
@@ -92,6 +92,30 @@ hands-free. Speech runs on the CPU with faster-whisper (`small.en`).
   Ctrl+Shift+V, so in a terminal press that yourself; the text is on the clipboard.
 - Linux can't tell whether a text box has the cursor, so Yap always pastes and then puts your old clipboard back.
 
+## Speech on Art (for the phone)
+
+A phone can only run a small Whisper. So when it can reach Art over Tailscale,
+the Android app sends your audio there, and Art sends back tidy text in one round
+trip: Whisper `large-v3-turbo` plus the Ollama tidy-up, both on Art. Away from
+home, or when Art is off, the phone does it all itself and tries Art again a
+minute later. Audio only ever travels inside your tailnet.
+
+On Art, after the Linux setup above:
+
+```bash
+cd ~/dev/yap/desktop
+ln -s "$PWD/linux/yap-serve.service" ~/.config/systemd/user/
+systemctl --user enable --now yap-serve
+curl http://$(tailscale ip -4):8723/health   # {"ok": true, "model": "large-v3-turbo"}
+```
+
+It listens on Art's Tailscale address only, on port 8723. If `ufw` is on, allow
+it from the tailnet: `sudo ufw allow in on tailscale0 to any port 8723`. The log
+(`journalctl --user -u yap-serve -f`) shows each dictation with how long Whisper
+and the tidy-up took. On Art's CPU that's about 3.5 s for 10 s of speech; an NVIDIA
+GPU with working drivers is several times faster. Change the model with
+`serve_model` in `~/.config/yap/config.toml`.
+
 ## Android
 
 Install `yap.apk`, open **Yap**, and do the two steps: allow the microphone and
@@ -108,19 +132,12 @@ cursor") so you can paste them wherever you like.
 Prefer a keyboard? Turn on the Yap keyboard and switch to it instead. 🌐 goes
 back to your normal keyboard; long-press it to pick one.
 
-The smarter tidy-up goes to Ollama on Art (`http://100.112.5.58:11434`) by
-default, so put Tailscale on the phone. Clear the address in the Yap app to stay
-on the phone only. Ollama only
-listens on localhost by default, so on that machine run:
+With Tailscale on the phone, speech goes to Art first (see
+[Speech on Art](#speech-on-art-for-the-phone)); the address is
+`http://100.112.5.58:8723` by default. Clear it in the Yap app to stay on the
+phone only. Ollama on Art can stay on localhost: the tidy-up runs next to it.
 
-```bash
-sudo systemctl edit ollama   # add:  [Service]  Environment="OLLAMA_HOST=0.0.0.0"
-sudo systemctl restart ollama
-```
-
-Then block port 11434 from anything but the tailnet (e.g. `sudo ufw allow in on tailscale0 to any port 11434`).
-
-Build it yourself (JDK 21 and the Android SDK/NDK; on Hermes they're already in
+Build it yourself (JDK 21 and the Android SDK/NDK; on Hermes and Art they're in
 `~/.local/share/android-toolchain` and `~/Android/Sdk`):
 
 ```bash

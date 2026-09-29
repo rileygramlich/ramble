@@ -40,6 +40,12 @@ class Config:
     # Names and jargon Whisper should expect and the tidy-up must not "correct".
     vocabulary: list[str] = field(default_factory=list)
 
+    # `yap serve`: the model used for other devices' audio, and where to listen.
+    # Bigger than the default because this machine has the time the phone doesn't.
+    serve_model: str = "large-v3-turbo"
+    serve_host: str = "127.0.0.1"  # set to this machine's Tailscale address
+    serve_port: int = 8723
+
     sounds: bool = True
     keep_history: bool = True  # every dictation is appended to DATA_DIR/history.jsonl
     restore_clipboard: bool = True

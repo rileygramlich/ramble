@@ -1,0 +1,16 @@
+# Speech for the phone: Whisper large-v3-turbo plus the tidy-up, on the Tailscale address only.
+# Install with:
+#   ln -s "$PWD/linux/yap-serve.service" ~/.config/systemd/user/ && systemctl --user enable --now yap-serve
+[Unit]
+Description=Yap speech server for the phone
+After=network-online.target ollama.service
+
+[Service]
+WorkingDirectory=%h/dev/yap/desktop
+# Tailscale may come up after us; keep retrying until its address exists.
+ExecStart=/bin/sh -c 'exec %h/.local/bin/uv run --frozen yap serve "$(tailscale ip -4)"'
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
