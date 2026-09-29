@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A history row or setup step: a quiet raised surface that darkens a touch when pressed. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true"><shape><solid android:color="@color/key"/><corners android:radius="16dp"/></shape></item>
+    <item><shape><solid android:color="@color/surface"/><corners android:radius="16dp"/></shape></item>
+</selector>

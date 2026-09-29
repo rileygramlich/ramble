@@ -7,4 +7,4 @@
     android:accessibilityFlags="flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
-    android:settingsActivity="dev.rileygramlich.yap.SetupActivity" />
+    android:settingsActivity="dev.rileygramlich.yap.SettingsActivity" />

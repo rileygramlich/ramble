@@ -1,50 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Yap's main screen: a line on whether it's ready, a box to try it in, and your history. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:fitsSystemWindows="true">
 
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-        android:orientation="vertical" android:padding="24dp">
+        android:orientation="vertical" android:paddingHorizontal="20dp" android:paddingTop="16dp" android:paddingBottom="32dp">
 
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="Yap" android:textSize="44sp" android:textStyle="bold" android:textColor="@color/accent" />
-        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Talk instead of typing. Your voice never leaves the phone."
-            android:textSize="16sp" android:textColor="@color/ink_soft" android:paddingBottom="20dp" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:text="yap" android:textSize="30sp" android:textStyle="bold" android:letterSpacing="-0.02"
+                android:textColor="@color/accent" />
+            <ImageButton android:id="@+id/open_settings"
+                android:layout_width="48dp" android:layout_height="48dp"
+                android:src="@drawable/ic_settings" android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Settings" />
+        </LinearLayout>
 
-        <TextView android:id="@+id/ready" android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:textSize="16sp" android:textColor="@color/ink" android:paddingBottom="8dp" />
-        <Button android:id="@+id/step_mic" style="@style/Step" />
-        <Button android:id="@+id/step_bubble" style="@style/Step" />
-        <TextView style="@style/Note"
-            android:text="If Android says the setting is restricted: open Yap's App info, tap ⋮, choose “Allow restricted settings”, then try step 2 again." />
+        <TextView android:id="@+id/ready" style="@style/Note"
+            android:paddingTop="2dp" android:paddingBottom="16dp" />
 
-        <TextView style="@style/Heading" android:text="Or use the Yap keyboard" />
-        <Button android:id="@+id/step_enable" style="@style/Step" />
-        <Button android:id="@+id/step_switch" style="@style/Step" />
+        <LinearLayout android:id="@+id/setup" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingBottom="12dp">
+            <Button android:id="@+id/step_mic" style="@style/Step" />
+            <Button android:id="@+id/step_bubble" style="@style/Step" />
+            <TextView style="@style/Note" android:paddingTop="8dp"
+                android:text="If Android says the setting is restricted: open Yap's App info, tap ⋮, choose “Allow restricted settings”, then try again." />
+        </LinearLayout>
 
-        <EditText android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:minLines="3" android:gravity="top" android:hint="Try it here"
-            android:textColor="@color/ink" android:textColorHint="@color/ink_soft"
-            android:layout_marginTop="16dp" android:inputType="textMultiLine|textCapSentences" />
+        <EditText android:id="@+id/try_it" style="@style/Field"
+            android:minLines="2" android:gravity="top" android:singleLine="false"
+            android:hint="Try it here" android:inputType="textMultiLine|textCapSentences" />
 
-        <TextView style="@style/Heading" android:text="Speech on Art" />
-        <TextView style="@style/Note"
-            android:text="When your phone can reach Art over Tailscale, Yap sends what you say there: a much bigger speech model plus the smarter tidy-up. It never goes anywhere else. Away from home, the phone does it all itself. Clear the address to always stay on the phone." />
-        <EditText android:id="@+id/speech_url" style="@style/Field"
-            android:hint="Blank = phone only" android:inputType="textUri" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="28dp" android:paddingBottom="8dp">
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                style="@style/Label" android:text="History" />
+            <TextView android:id="@+id/clear_history" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Clear" android:textColor="@color/ink_soft" android:textSize="14sp"
+                android:padding="8dp" android:background="?android:attr/selectableItemBackground" />
+        </LinearLayout>
 
-        <TextView style="@style/Heading" android:text="Tidy-up away from Art (optional)" />
-        <TextView style="@style/Note"
-            android:text="The phone always removes ums and stutters, and handles “scratch that” and “new line”. For smarter tidy-up when Art is off, point it at another Ollama server." />
-        <EditText android:id="@+id/ollama_url" style="@style/Field"
-            android:hint="Blank = phone's rules" android:inputType="textUri" />
-        <EditText android:id="@+id/ollama_model" style="@style/Field"
-            android:hint="qwen2.5:1.5b" android:inputType="text" />
+        <LinearLayout android:id="@+id/history" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
-        <TextView style="@style/Heading" android:text="Words to get right" />
-        <TextView style="@style/Note" android:text="Names and jargon, separated by commas." />
-        <EditText android:id="@+id/vocabulary" style="@style/Field"
-            android:hint="Tommy Games, Quiddler, Katharina" android:inputType="textMultiLine" />
+        <TextView android:id="@+id/history_empty" style="@style/Note"
+            android:gravity="center" android:paddingVertical="32dp"
+            android:text="What you say shows up here: your last 100 dictations, kept only on this phone. Tap one to copy it." />
     </LinearLayout>
 </ScrollView>

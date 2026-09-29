@@ -2,64 +2,68 @@ package dev.rileygramlich.yap;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.text.TextUtils;
+import android.text.format.DateUtils;
+import android.view.View;
 import android.view.inputmethod.InputMethodInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
-/** First-run setup and settings: the steps to turn Yap on (bubble or keyboard), plus tidy-up options. */
+/**
+ * Yap's main screen: whether it's ready (with the two setup steps until it is),
+ * a box to try it in, and the history of what you've said. Everything else is
+ * in Settings.
+ */
 public class SetupActivity extends Activity {
-    private Button micStep, bubbleStep, enableStep, switchStep;
-    private EditText speech, url, model, vocabulary;
-    private Prefs prefs;
+    private Button micStep, bubbleStep;
+    private LinearLayout history;
+    private final SharedPreferences.OnSharedPreferenceChangeListener historyChanged = (sp, key) -> showHistory();
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.activity_setup);
-        prefs = new Prefs(this);
         micStep = findViewById(R.id.step_mic);
         bubbleStep = findViewById(R.id.step_bubble);
-        enableStep = findViewById(R.id.step_enable);
-        switchStep = findViewById(R.id.step_switch);
-        speech = findViewById(R.id.speech_url);
-        url = findViewById(R.id.ollama_url);
-        model = findViewById(R.id.ollama_model);
-        vocabulary = findViewById(R.id.vocabulary);
+        history = findViewById(R.id.history);
 
         micStep.setOnClickListener(v -> requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1));
         bubbleStep.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)));
-        enableStep.setOnClickListener(v -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
-        switchStep.setOnClickListener(v -> getSystemService(InputMethodManager.class).showInputMethodPicker());
-
-        speech.setText(prefs.speechUrl());
-        url.setText(prefs.ollamaUrl());
-        model.setText(prefs.ollamaModel());
-        vocabulary.setText(prefs.vocabulary());
+        findViewById(R.id.open_settings).setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));
+        findViewById(R.id.clear_history).setOnClickListener(v -> new AlertDialog.Builder(this)
+                .setMessage("Clear your whole history?")
+                .setPositiveButton("Clear", (d, w) -> History.clear(this))
+                .setNegativeButton("Cancel", null)
+                .show());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refresh();
-    }
-
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) refresh(); // the keyboard picker is a dialog, not a new screen
+        showHistory();
+        // Dictations made in the box above (or anywhere) appear as they happen.
+        getSharedPreferences("yap_history", MODE_PRIVATE).registerOnSharedPreferenceChangeListener(historyChanged);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        prefs.save(speech.getText().toString(), url.getText().toString(), model.getText().toString(), vocabulary.getText().toString());
+        getSharedPreferences("yap_history", MODE_PRIVATE).unregisterOnSharedPreferenceChangeListener(historyChanged);
     }
 
     @Override
@@ -68,41 +72,100 @@ public class SetupActivity extends Activity {
     }
 
     private void refresh() {
-        boolean mic = checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
-        boolean bubble = isBubbleOn();
-        boolean enabled = isEnabled();
-        boolean current = isCurrent();
-        mark(micStep, mic, "1. Allow the microphone");
-        mark(bubbleStep, bubble, "2. Turn on the Yap bubble");
-        mark(enableStep, enabled, "Turn on the Yap keyboard");
-        mark(switchStep, current, "Switch to Yap");
-        TextView ready = findViewById(R.id.ready);
-        ready.setText(!mic || !(bubble || current)
+        boolean mic = hasMic(this), bubble = isBubbleOn(this), keyboard = isKeyboardCurrent(this);
+        mark(micStep, mic, "Allow the microphone");
+        mark(bubbleStep, bubble, "Turn on the Yap bubble");
+        boolean ready = mic && (bubble || keyboard);
+        findViewById(R.id.setup).setVisibility(ready ? View.GONE : View.VISIBLE);
+        TextView status = findViewById(R.id.ready);
+        status.setText(!ready
                 ? "Two quick steps, once."
                 : bubble
-                ? "All set. Tap the box below, tap the floating mic, talk, and tap it again."
-                : "All set. Tap the box below, hold the mic, and talk.");
+                ? "Ready. Open any keyboard, tap the little mic above it, talk, and tap ✓."
+                : "Ready. Hold the mic on the Yap keyboard and talk.");
     }
 
-    private void mark(Button step, boolean done, String label) {
-        step.setText(done ? "✓  " + label : label);
-        step.setAlpha(done ? 0.55f : 1f);
+    // -- history -----------------------------------------------------------------
+    private void showHistory() {
+        history.removeAllViews();
+        long now = System.currentTimeMillis();
+        for (History.Entry entry : History.all(this)) history.addView(row(entry, now));
+        boolean empty = history.getChildCount() == 0;
+        findViewById(R.id.history_empty).setVisibility(empty ? View.VISIBLE : View.GONE);
+        findViewById(R.id.clear_history).setVisibility(empty ? View.GONE : View.VISIBLE);
     }
 
-    private boolean isBubbleOn() {
-        String on = Settings.Secure.getString(getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        return on != null && on.contains(new ComponentName(this, YapBubble.class).flattenToString());
+    /** One dictation: tap to copy it, hold to delete it. */
+    private View row(History.Entry entry, long now) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.VERTICAL);
+        row.setBackgroundResource(R.drawable.card);
+        row.setPadding(dp(16), dp(14), dp(16), dp(14));
+        LinearLayout.LayoutParams spacing = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        spacing.topMargin = dp(8);
+        row.setLayoutParams(spacing);
+
+        TextView text = new TextView(this);
+        text.setText(entry.text);
+        text.setTextColor(getColor(R.color.ink));
+        text.setTextSize(16);
+        text.setLineSpacing(0, 1.15f);
+        text.setMaxLines(4);
+        text.setEllipsize(TextUtils.TruncateAt.END);
+        row.addView(text);
+
+        TextView when = new TextView(this);
+        when.setText(DateUtils.getRelativeTimeSpanString(entry.at, now, DateUtils.MINUTE_IN_MILLIS));
+        when.setTextColor(getColor(R.color.ink_soft));
+        when.setTextSize(12);
+        when.setPadding(0, dp(6), 0, 0);
+        row.addView(when);
+
+        row.setOnClickListener(v -> {
+            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Yap", entry.text));
+            // Android 13+ shows its own "Copied" confirmation.
+            if (Build.VERSION.SDK_INT < 33) Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
+        });
+        row.setOnLongClickListener(v -> {
+            new AlertDialog.Builder(this)
+                    .setMessage("Delete this from your history?")
+                    .setPositiveButton("Delete", (d, w) -> History.remove(this, entry.at))
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return true;
+        });
+        return row;
     }
 
-    private boolean isEnabled() {
-        for (InputMethodInfo info : getSystemService(InputMethodManager.class).getEnabledInputMethodList()) {
-            if (info.getPackageName().equals(getPackageName())) return true;
+    // -- setup state, shared with Settings ---------------------------------------
+    static void mark(Button step, boolean done, String label) {
+        step.setText(done ? "✓   " + label : label);
+        step.setTextColor(step.getContext().getColor(done ? R.color.accent : R.color.ink));
+        step.setAlpha(done ? 0.6f : 1f);
+    }
+
+    static boolean hasMic(Context context) {
+        return context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    static boolean isBubbleOn(Context context) {
+        String on = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        return on != null && on.contains(new ComponentName(context, YapBubble.class).flattenToString());
+    }
+
+    static boolean isKeyboardEnabled(Context context) {
+        for (InputMethodInfo info : context.getSystemService(InputMethodManager.class).getEnabledInputMethodList()) {
+            if (info.getPackageName().equals(context.getPackageName())) return true;
         }
         return false;
     }
 
-    private boolean isCurrent() {
-        String id = Settings.Secure.getString(getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
-        return id != null && id.startsWith(getPackageName() + "/");
+    static boolean isKeyboardCurrent(Context context) {
+        String id = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        return id != null && id.startsWith(context.getPackageName() + "/");
+    }
+
+    private int dp(int value) {
+        return Math.round(value * getResources().getDisplayMetrics().density);
     }
 }

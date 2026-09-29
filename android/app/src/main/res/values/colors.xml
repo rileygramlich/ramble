@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="board">#16181c</color>
-    <color name="key">#2a2d33</color>
-    <color name="key_pressed">#3a3e46</color>
-    <color name="ink">#f1ede4</color>
-    <color name="ink_soft">#a9a397</color>
-    <color name="accent">#ff6b4a</color>
-    <color name="accent_live">#ff3d6e</color>
+    <!-- Dark and quiet, with one light-blue accent (the bubble's blue). -->
+    <color name="board">#0f1115</color>
+    <color name="surface">#171a20</color>
+    <color name="key">#1f232a</color>
+    <color name="key_pressed">#2a2f38</color>
+    <color name="line">#262a32</color>
+    <color name="ink">#eef1f5</color>
+    <color name="ink_soft">#8a93a1</color>
+    <color name="accent">#8ecbff</color>
+    <color name="accent_live">#5eb3ff</color>
+    <color name="on_accent">#0b2a45</color>
     <!-- The floating bubble: light blue with a navy mic, deeper blue while it listens. -->
     <color name="bubble">#a8dcff</color>
     <color name="bubble_live">#6cc2ff</color>

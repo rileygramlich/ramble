@@ -22,6 +22,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".SettingsActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+
         <service
             android:name=".YapKeyboard"
             android:label="@string/ime_name"
