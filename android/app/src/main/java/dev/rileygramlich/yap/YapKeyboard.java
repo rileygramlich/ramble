@@ -140,6 +140,7 @@ public class YapKeyboard extends InputMethodService {
             }
             main.post(() -> {
                 busy = false;
+                History.add(this, said.text);
                 // Before Enter/Send, no trailing space: it would end up in the message.
                 if (!said.text.isEmpty()) insert(said.text + (said.action == null ? " " : ""));
                 if (said.action != null) enter();
