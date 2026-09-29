@@ -35,13 +35,62 @@ for the Python program it prints. Yap needs those to hear the hotkey and press �
 - Log: `~/Library/Logs/yap.log`. History: `~/.local/share/yap/history.jsonl`, handy if a paste lands in the wrong place.
 - `yap check` tests the mic, the model and Ollama. `yap file clip.m4a` transcribes a recording.
 - Restart: `launchctl kickstart -k gui/$(id -u)/dev.rileygramlich.yap`
+- Clicked away while talking? If no text box has the cursor when you let go, the
+  words stay on the clipboard (with a "Copied" notification) so you can paste them.
 
-It also runs on Linux (`uv run yap` in `desktop/`, using faster-whisper on the CPU).
-Install `libportaudio2`. On Wayland, Yap reads the hotkey straight from
-`/dev/input`, so add yourself to the `input` group (`sudo usermod -aG input $USER`,
-then log in again), and it pastes with `ydotool`, so keep `ydotoold` running. To start
-it at login: `ln -s "$PWD/linux/yap.service" ~/.config/systemd/user/ && systemctl --user enable --now yap`.
-Log: `journalctl --user -u yap -f`.
+## Linux
+
+Same idea as the Mac: hold **Right Ctrl**, talk, let go and it pastes; tap for
+hands-free. Speech runs on the CPU with faster-whisper (`small.en`).
+
+1. System packages: the audio library, clipboard tools, the paste helper, and
+   ffmpeg for `yap file`. On Ubuntu/Debian:
+
+   ```bash
+   sudo apt install libportaudio2 wl-clipboard xclip ydotool ffmpeg
+   systemctl --user enable --now ydotool   # the daemon ydotool pastes through
+   ```
+
+2. Let Yap hear the hotkey under Wayland. GNOME and KDE hide global key presses
+   from apps, so Yap reads the keyboard from `/dev/input`. Then **log out and back in**:
+
+   ```bash
+   sudo usermod -aG input $USER
+   ```
+
+3. Yap itself, with [uv](https://docs.astral.sh/uv/), which fetches the right Python:
+
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   git clone https://github.com/rileygramlich/yap && cd yap/desktop
+   uv sync
+   ```
+
+4. Optional, for the smarter tidy-up: [Ollama](https://ollama.com) and the model.
+
+   ```bash
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull qwen2.5:1.5b
+   ```
+
+5. Check it, then start it at every login:
+
+   ```bash
+   uv run yap check    # mic, speech model, Ollama
+   ln -s "$PWD/linux/yap.service" ~/.config/systemd/user/
+   systemctl --user enable --now yap
+   ```
+
+   The service expects the clone at `~/dev/yap`. Edit `WorkingDirectory` in
+   `linux/yap.service` if yours is somewhere else.
+
+- Settings: `~/.config/yap/config.toml` (`uv run yap init` writes an example). After editing: `systemctl --user restart yap`
+- Log: `journalctl --user -u yap -f`. History: `~/.local/share/yap/history.jsonl`
+- **"can't read any keyboard in /dev/input"** in the log: you haven't logged in again since step 2.
+  Until then the hotkey only works while an X11 app has focus.
+- **Nothing pastes:** check `systemctl --user status ydotool`. Terminals paste with
+  Ctrl+Shift+V, so in a terminal press that yourself; the text is on the clipboard.
+- Linux can't tell whether a text box has the cursor, so Yap always pastes and then puts your old clipboard back.
 
 ## Android
 
@@ -51,6 +100,10 @@ beside any text box you're typing in, and your normal keyboard stays. Tap it,
 talk, and tap it again, or hold it and let go. Drag it to move it. Because the
 APK isn't from the Play Store, Android 13+ greys the switch out at first: open
 Yap's App info, tap ⋮ → **Allow restricted settings**, then turn it on.
+
+Tapped out of the text box while talking? The bubble keeps listening, and when
+you finish, the words are copied to the clipboard ("Copied: no text box had the
+cursor") so you can paste them wherever you like.
 
 Prefer a keyboard? Turn on the Yap keyboard and switch to it instead. 🌐 goes
 back to your normal keyboard; long-press it to pick one.
