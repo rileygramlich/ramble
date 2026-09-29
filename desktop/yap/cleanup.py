@@ -19,6 +19,26 @@ NEW_LINE = re.compile(r",?\s*\bnew line\b[.,!?]*\s*", re.IGNORECASE)
 # "I I think" → "I think". Words that legitimately repeat ("that that") are left alone.
 STUTTER = re.compile(r"\b(\w+)(?:,?\s+\1\b)+", re.IGNORECASE)
 KEEP_DOUBLED = {"that", "had", "is", "do", "very", "no", "bye", "ha"}
+# A command said as its own sentence at the very end: type what came before, then
+# press Enter or the app's Send button. "Hi. Send it." sends; "Can you send it?"
+# and "I'll send it" are just words.
+COMMAND = re.compile(
+    r"(?:^|(?<=[.!?,]))\s*(?:(?P<enter>(?:press|hit)\s+(?:enter|return))"
+    r"|(?P<send>send\s+(?:it|that|this|(?:the\s+)?message)))\s*[.!]*\s*$",
+    re.IGNORECASE,
+)
+
+
+def command(text: str) -> tuple[str, str | None]:
+    """Split a spoken command off the end: "Hi. Send it." → ("Hi.", "send").
+
+    The action is "enter", "send", or None when there's no command.
+    """
+    text = text.strip()
+    m = COMMAND.search(text)
+    if not m:
+        return text, None
+    return text[: m.start()].rstrip(" ,"), "enter" if m.group("enter") else "send"
 
 
 def rules(text: str) -> str:

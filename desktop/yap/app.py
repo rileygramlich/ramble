@@ -15,7 +15,7 @@ from datetime import datetime
 from . import cleanup
 from .audio import Recorder, is_speech
 from .config import DATA_DIR, IS_LINUX, Config
-from .output import paste, sound
+from .output import paste, press_enter, sound
 from .transcribe import SAMPLE_RATE, Transcriber
 
 TAP = 0.3  # seconds; a press shorter than this is a tap, not a hold
@@ -42,15 +42,21 @@ class Pipeline:
                 pass
         threading.Thread(target=ping, daemon=True).start()
 
-    def run(self, audio) -> tuple[str, str]:
+    def run(self, audio) -> tuple[str, str, str | None]:
+        """(what Whisper heard, the tidy text, a spoken command: "enter", "send" or None)."""
         raw = self.transcribe(audio)
-        c = self.config
-        if not raw or c.cleanup == "off":
-            return raw, raw
-        if c.cleanup == "rules":
-            return raw, cleanup.rules(raw)
-        return raw, cleanup.polish(raw, url=c.ollama_url, model=c.ollama_model,
-                                   vocabulary=c.vocabulary, timeout=c.ollama_timeout)
+        spoken, action = cleanup.command(raw)
+        return raw, tidy(self.config, spoken), action
+
+
+def tidy(config: Config, text: str, vocabulary: list[str] | None = None) -> str:
+    if not text or config.cleanup == "off":
+        return text
+    if config.cleanup == "rules":
+        return cleanup.rules(text)
+    return cleanup.polish(text, url=config.ollama_url, model=config.ollama_model,
+                          vocabulary=config.vocabulary if vocabulary is None else vocabulary,
+                          timeout=config.ollama_timeout)
 
 
 class Dictation:
@@ -123,17 +129,21 @@ class Dictation:
                 continue
             started = time.monotonic()
             try:
-                raw, text = self.pipeline.run(audio)
+                raw, text, action = self.pipeline.run(audio)
             except Exception as e:
                 print(f"! transcription failed: {e}", flush=True)
                 if self.config.sounds:
                     sound("error")
                 continue
-            if not text:
+            if not text and not action:
                 continue
             took = time.monotonic() - started
-            print(f"✓ {took:.1f}s  {text}", flush=True)
-            paste(text + " ", restore=self.config.restore_clipboard)
+            print(f"✓ {took:.1f}s  {text}" + (f"  [{action}]" if action else ""), flush=True)
+            # Before Enter/Send, no trailing space: it would end up in the message.
+            landed = paste(text + ("" if action else " "), restore=self.config.restore_clipboard) if text else True
+            if action and landed:
+                time.sleep(0.15)  # let the app take the paste before the Enter
+                press_enter()
             if self.config.keep_history:
                 self._remember(raw, text, len(audio) / SAMPLE_RATE, took)
 

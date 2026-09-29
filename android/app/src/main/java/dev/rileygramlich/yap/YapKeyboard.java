@@ -131,16 +131,18 @@ public class YapKeyboard extends InputMethodService {
         busy = true;
         say("Writing…");
         worker.execute(() -> {
-            String text;
+            Dictation.Result said;
             try {
-                text = Dictation.run(this, audio);
+                said = Dictation.run(this, audio);
             } catch (Exception e) {
                 main.post(() -> { busy = false; say("That didn't work: " + e.getMessage()); });
                 return;
             }
             main.post(() -> {
                 busy = false;
-                if (!text.isEmpty()) insert(text);
+                // Before Enter/Send, no trailing space: it would end up in the message.
+                if (!said.text.isEmpty()) insert(said.text + (said.action == null ? " " : ""));
+                if (said.action != null) enter();
                 idle();
             });
         });
@@ -152,7 +154,7 @@ public class YapKeyboard extends InputMethodService {
         if (ic == null) return;
         CharSequence before = ic.getTextBeforeCursor(1, 0);
         boolean needsSpace = before != null && before.length() > 0 && !Character.isWhitespace(before.charAt(0));
-        ic.commitText((needsSpace ? " " : "") + text + " ", 1);
+        ic.commitText((needsSpace ? " " : "") + text, 1);
     }
 
     private void commit(String s) {

@@ -6,7 +6,7 @@ and the Ollama tidy-up next to it. Nothing leaves your tailnet.
 
     POST /dictate   body: 16 kHz mono 16-bit little-endian PCM
                     header X-Yap-Vocabulary: comma-separated names (URL-encoded)
-                    → {"raw": ..., "text": ..., "took": seconds}
+                    → {"raw": ..., "text": ..., "action": "enter"|"send"|null, "took": seconds}
     GET  /health    → {"ok": true, "model": ...}
 
 Listen on the Tailscale address only (--host 100.x.y.z), not on every network.
@@ -22,6 +22,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 
 from . import cleanup
+from .app import tidy
 from .config import Config
 from .transcribe import SAMPLE_RATE, Transcriber
 
@@ -62,11 +63,12 @@ def make_server(config: Config, host: str, port: int) -> ThreadingHTTPServer:
             with lock:
                 raw = transcribe(audio, vocabulary)
             heard = time.monotonic()
-            text = tidy(config, raw, [*config.vocabulary, *vocabulary])
+            spoken, action = cleanup.command(raw)
+            text = tidy(config, spoken, [*config.vocabulary, *vocabulary])
             took = round(time.monotonic() - started, 2)
             print(f"✓ {took}s (whisper {heard - started:.1f}s, tidy {time.monotonic() - heard:.1f}s)  "
                   f"{len(audio) / SAMPLE_RATE:.1f}s from {self.client_address[0]}  {text}", flush=True)
-            self._send(200, {"raw": raw, "text": text, "took": took})
+            self._send(200, {"raw": raw, "text": text, "action": action, "took": took})
 
         def _send(self, status: int, body: dict):
             data = json.dumps(body, ensure_ascii=False).encode()
@@ -81,11 +83,3 @@ def make_server(config: Config, host: str, port: int) -> ThreadingHTTPServer:
 
     return ThreadingHTTPServer((host, port), Handler)
 
-
-def tidy(config: Config, raw: str, vocabulary: list[str]) -> str:
-    if not raw or config.cleanup == "off":
-        return raw
-    if config.cleanup == "rules":
-        return cleanup.rules(raw)
-    return cleanup.polish(raw, url=config.ollama_url, model=config.ollama_model,
-                          vocabulary=vocabulary, timeout=config.ollama_timeout)

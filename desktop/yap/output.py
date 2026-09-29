@@ -46,6 +46,16 @@ def paste(text: str, restore: bool = True) -> bool:
     return True
 
 
+def press_enter() -> None:
+    """For "press enter" and "send it": most chat apps on a computer send on Enter."""
+    if not IS_MAC and os.environ.get("WAYLAND_DISPLAY") and shutil.which("ydotool"):
+        if subprocess.run(["ydotool", "key", "28:1", "28:0"], capture_output=True).returncode == 0:
+            return  # 28 is the evdev code for Enter
+    from pynput.keyboard import Controller, Key
+
+    Controller().tap(Key.enter)
+
+
 def focused_text_field() -> bool | None:
     """Is the cursor in something you can type into? None if we can't tell.
 

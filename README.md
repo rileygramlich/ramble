@@ -13,6 +13,11 @@ key, speak, let go, and tidy text appears wherever your cursor is.
   the rules output.
 - **Your vocabulary**: list names and jargon once, and both Whisper and the tidy-up
   spell them right.
+- **Voice commands**: end with **"send it"** (or "send that", "send the message")
+  and Yap types your words, then sends: it taps the app's Send button on the
+  phone, and presses Enter on a computer. **"press enter"** (or "hit enter")
+  presses Enter. It only counts as a command when it's its own sentence at the
+  very end: "See you at six. Send it." sends; "Can you send it?" is just text.
 
 | | Mac (`desktop/`) | Android (`android/`) |
 |---|---|---|

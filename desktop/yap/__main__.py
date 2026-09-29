@@ -29,8 +29,8 @@ def main(argv: list[str] = sys.argv[1:]) -> None:
     elif command == "file" and len(argv) == 2:
         from .app import Pipeline
         started = time.monotonic()
-        raw, text = Pipeline(config).run(read_audio(argv[1]))
-        print(f"raw:   {raw}\ntext:  {text}\ntook:  {time.monotonic() - started:.1f}s")
+        raw, text, action = Pipeline(config).run(read_audio(argv[1]))
+        print(f"raw:   {raw}\ntext:  {text}\npress: {action or '-'}\ntook:  {time.monotonic() - started:.1f}s")
     elif command == "serve" and len(argv) <= 2:
         from .serve import serve
         serve(config, argv[1] if len(argv) == 2 else config.serve_host, config.serve_port)

@@ -40,6 +40,7 @@ def test_dictate_returns_tidy_text(server):
     assert fake.heard == (16000, ["Katharina", "Yap"])
     assert body["raw"] == "um so send it to Katharina"
     assert body["text"] == "So send it to Katharina"
+    assert body["action"] is None
 
 
 def test_health(server):

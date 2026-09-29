@@ -41,3 +41,26 @@ def test_a_real_tidy_up_is_kept():
 def test_unreachable_ollama_falls_back_to_rules():
     out = cleanup.polish("um so the the build is green now", url="http://127.0.0.1:9", model="x", timeout=0.5)
     assert out == "So the build is green now"
+
+
+# -- spoken commands at the end ---------------------------------------------------
+import pytest  # noqa: E402
+
+from yap.cleanup import command  # noqa: E402
+
+
+@pytest.mark.parametrize("heard, expected", [
+    ("Hi Katharina, see you at six. Send it.", ("Hi Katharina, see you at six.", "send")),
+    ("Running late, send it", ("Running late", "send")),
+    ("On my way. Send the message!", ("On my way.", "send")),
+    ("Send it.", ("", "send")),
+    ("Looks good to me. Press enter.", ("Looks good to me.", "enter")),
+    ("ship it, hit return", ("ship it", "enter")),
+    # Just words, not commands:
+    ("Can you send it?", ("Can you send it?", None)),
+    ("I'll send it tomorrow.", ("I'll send it tomorrow.", None)),
+    ("I'll send it.", ("I'll send it.", None)),
+    ("Press enter to continue.", ("Press enter to continue.", None)),
+])
+def test_command(heard, expected):
+    assert command(heard) == expected

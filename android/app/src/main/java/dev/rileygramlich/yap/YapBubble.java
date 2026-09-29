@@ -7,6 +7,7 @@ import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,8 +25,10 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
+import java.util.ArrayDeque;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
 
 /**
  * The Yap bubble: a floating light-blue mic over every app, like Wispr Flow's,
@@ -264,16 +267,19 @@ public class YapBubble extends AccessibilityService {
         busy = true;
         mode(Mode.WRITING);
         worker.execute(() -> {
-            String text;
+            Dictation.Result said;
             try {
-                text = Dictation.run(this, audio);
+                said = Dictation.run(this, audio);
             } catch (Exception e) {
                 main.post(() -> { done(); toast("That didn't work: " + e.getMessage()); });
                 return;
             }
             main.post(() -> {
                 done();
-                if (!text.isEmpty()) insert(text);
+                // Before Enter/Send, no trailing space: it would end up in the message.
+                boolean landed = said.text.isEmpty() || insert(said.text + (said.action == null ? " " : ""));
+                // A beat later, so the app has the text (and has shown its Send button).
+                if (said.action != null && landed) main.postDelayed(() -> press(said.action), 250);
             });
         });
     }
@@ -292,19 +298,20 @@ public class YapBubble extends AccessibilityService {
     }
 
     // -- typing ------------------------------------------------------------------
-    private void insert(String text) {
+    /** False if the text ended up on the clipboard instead of in a text box. */
+    private boolean insert(String text) {
         AccessibilityNodeInfo field = findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
         if (field == null || !field.isEditable()) {
-            copy(text);
+            copy(text.trim());
             toast("Copied: no text box had the cursor");
-            return;
+            return false;
         }
         CharSequence current = field.isPassword() ? null : field.getText();
         if (current != null && isPlaceholder(field, current)) current = "";
         // Set the text ourselves only when we know exactly where the cursor is. Otherwise
         // paste, and the app puts it at its own cursor.
-        if (current != null && (current.length() == 0 || cursorInside(field, current)) && splice(field, current, text)) return;
-        paste(field, text);
+        if (current != null && (current.length() == 0 || cursorInside(field, current)) && splice(field, current, text)) return true;
+        return paste(field, text);
     }
 
     /**
@@ -333,7 +340,7 @@ public class YapBubble extends AccessibilityService {
         if (start < 0 || start > current.length()) start = end = current.length();
         end = Math.max(start, Math.min(end, current.length()));
         boolean needsSpace = start > 0 && !Character.isWhitespace(current.charAt(start - 1));
-        String piece = (needsSpace ? " " : "") + text + " ";
+        String piece = (needsSpace ? " " : "") + text;
         String updated = current.subSequence(0, start) + piece + current.subSequence(end, current.length());
 
         Bundle args = new Bundle();
@@ -347,15 +354,61 @@ public class YapBubble extends AccessibilityService {
     }
 
     /** For fields that won't take text directly (web pages, password boxes): paste, then put the clipboard back. */
-    private void paste(AccessibilityNodeInfo field, String text) {
+    private boolean paste(AccessibilityNodeInfo field, String text) {
         ClipboardManager clipboard = getSystemService(ClipboardManager.class);
         ClipData previous = clipboard.getPrimaryClip(); // null if Android won't let us read it
-        copy(text + " ");
+        copy(text);
         if (!field.performAction(AccessibilityNodeInfo.ACTION_PASTE)) {
             toast("Couldn't type into that box, so it's on the clipboard");
-            return;
+            return false;
         }
         if (previous != null) main.postDelayed(() -> clipboard.setPrimaryClip(previous), 500);
+        return true;
+    }
+
+    // -- spoken commands ---------------------------------------------------------
+    private static final Pattern SEND_LABEL = Pattern.compile("send( (sms|mms|message|text|chat|email|now))?", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * "send it": tap the app's Send button, because Enter in most phone chat apps
+     * only starts a new line. "press enter", or no Send button found: the
+     * keyboard's Enter/Go/Search action.
+     */
+    private void press(String action) {
+        AccessibilityNodeInfo field = findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if ("send".equals(action)) {
+            AccessibilityNodeInfo send = sendButton(field);
+            if (send != null && send.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return;
+        }
+        if (field != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+                && field.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.getId())) return;
+        toast("send".equals(action) ? "Couldn't find a Send button here" : "Couldn't press Enter here");
+    }
+
+    /** The Send button in the same window as the text box: labelled "Send", "Send SMS", … */
+    private AccessibilityNodeInfo sendButton(AccessibilityNodeInfo field) {
+        AccessibilityNodeInfo root = field != null && field.getWindow() != null ? field.getWindow().getRoot() : getRootInActiveWindow();
+        if (root == null) return null;
+        ArrayDeque<AccessibilityNodeInfo> queue = new ArrayDeque<>();
+        queue.add(root);
+        while (!queue.isEmpty()) {
+            AccessibilityNodeInfo node = queue.poll();
+            if (isSendLabel(node.getContentDescription()) || isSendLabel(node.getText())) {
+                // Compose often puts the label on an icon inside the clickable button.
+                for (AccessibilityNodeInfo n = node; n != null; n = n.getParent()) {
+                    if (n.isClickable() && n.isEnabled()) return n;
+                }
+            }
+            for (int i = 0; i < node.getChildCount(); i++) {
+                AccessibilityNodeInfo child = node.getChild(i);
+                if (child != null) queue.add(child);
+            }
+        }
+        return null;
+    }
+
+    private static boolean isSendLabel(CharSequence label) {
+        return label != null && SEND_LABEL.matcher(label.toString().trim()).matches();
     }
 
     private void copy(String text) {

@@ -21,9 +21,25 @@ final class Cleanup {
     private static final Pattern NEW_LINE = Pattern.compile(",?\\s*\\bnew line\\b[.,!?]*\\s*", I);
     private static final Pattern STUTTER = Pattern.compile("\\b(\\w+)(?:,?\\s+\\1\\b)+", I);
     private static final Set<String> KEEP_DOUBLED = new HashSet<>(Arrays.asList("that", "had", "is", "do", "very", "no", "bye", "ha"));
+    /**
+     * A command said as its own sentence at the very end: type what came before,
+     * then press Enter or the app's Send button. "Hi. Send it." sends; "Can you
+     * send it?" and "I'll send it" are just words.
+     */
+    private static final Pattern COMMAND = Pattern.compile(
+            "(?:^|(?<=[.!?,]))\\s*(?:(?<enter>(?:press|hit)\\s+(?:enter|return))"
+                    + "|(?<send>send\\s+(?:it|that|this|(?:the\\s+)?message)))\\s*[.!]*\\s*$", I);
     private static final Pattern SENTENCE_START = Pattern.compile("(^|[.!?]\\s+)([a-z])");
 
     private Cleanup() {}
+
+    /** "Hi. Send it." → {"Hi.", "send"}. The action is "enter", "send", or null. */
+    static String[] command(String text) {
+        text = text.trim();
+        Matcher m = COMMAND.matcher(text);
+        if (!m.find()) return new String[]{text, null};
+        return new String[]{text.substring(0, m.start()).replaceAll("[ ,]+$", ""), m.group("enter") != null ? "enter" : "send"};
+    }
 
     static String rules(String text) {
         text = scratch(text.trim());

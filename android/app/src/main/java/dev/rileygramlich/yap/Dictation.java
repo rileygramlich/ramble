@@ -27,8 +27,20 @@ final class Dictation {
 
     private Dictation() {}
 
+    /** Tidy text, plus a spoken command to carry out after typing it. */
+    static final class Result {
+        final String text;
+        /** "enter", "send", or null. */
+        final String action;
+
+        Result(String text, String action) {
+            this.text = text;
+            this.action = action;
+        }
+    }
+
     /** Slow: call it off the main thread. */
-    static String run(Context context, float[] audio) throws Exception {
+    static Result run(Context context, float[] audio) throws Exception {
         Prefs prefs = new Prefs(context);
         String art = prefs.speechUrl();
         if (!art.isEmpty() && SystemClock.elapsedRealtime() >= skipArtUntil) {
@@ -38,11 +50,12 @@ final class Dictation {
                 skipArtUntil = SystemClock.elapsedRealtime() + RETRY_ART_MS;
             }
         }
-        String raw = Whisper.run(context, audio, prefs.vocabulary());
-        return Polish.run(raw, prefs.ollamaUrl(), prefs.ollamaModel(), prefs.vocabulary(), 4000);
+        String[] spoken = Cleanup.command(Whisper.run(context, audio, prefs.vocabulary()));
+        String text = spoken[0].isEmpty() ? "" : Polish.run(spoken[0], prefs.ollamaUrl(), prefs.ollamaModel(), prefs.vocabulary(), 4000);
+        return new Result(text, spoken[1]);
     }
 
-    private static String onArt(String url, float[] audio, String vocabulary) throws Exception {
+    private static Result onArt(String url, float[] audio, String vocabulary) throws Exception {
         ByteBuffer pcm = ByteBuffer.allocate(audio.length * 2).order(ByteOrder.LITTLE_ENDIAN);
         for (float s : audio) pcm.putShort((short) Math.max(-32768, Math.min(32767, Math.round(s * 32767))));
 
@@ -56,7 +69,8 @@ final class Dictation {
             c.setRequestProperty("X-Yap-Vocabulary", URLEncoder.encode(vocabulary, "UTF-8"));
             c.getOutputStream().write(pcm.array());
             if (c.getResponseCode() != 200) throw new IllegalStateException("Art said " + c.getResponseCode());
-            return new JSONObject(readAll(c.getInputStream())).getString("text");
+            JSONObject reply = new JSONObject(readAll(c.getInputStream()));
+            return new Result(reply.getString("text"), reply.isNull("action") ? null : reply.optString("action", null));
         } finally {
             c.disconnect();
         }
