@@ -21,7 +21,7 @@ key, speak, let go, and tidy text appears wherever your cursor is.
 
 | | Mac (`desktop/`) | Android (`android/`) |
 |---|---|---|
-| How you use it | Hold **Right Option ⌥**, talk, let go and it pastes. Tap for hands-free. | A floating mic bubble over your normal keyboard: tap, talk, tap again and it types. Or use Yap as a voice keyboard. |
+| How you use it | Click the light-blue bubble at the bottom of the screen, talk, click ✓. Or hold **Right Option ⌥**, talk, let go. | A floating mic bubble over your normal keyboard: tap, talk, tap again and it types. Or use Yap as a voice keyboard. |
 | Speech model | `whisper-large-v3-turbo` on Apple's MLX | `large-v3-turbo` on Art over Tailscale; away from home `ggml-base.en-q5_1` on the phone (57 MB, bundled) |
 | Tidy-up model | Ollama on the Mac | On Art with the speech, over Tailscale; otherwise rules only |
 
@@ -40,6 +40,11 @@ for the Python program it prints. Yap needs those to hear the hotkey and press �
 - Log: `~/Library/Logs/yap.log`. History: `~/.local/share/yap/history.jsonl`, handy if a paste lands in the wrong place.
 - `yap check` tests the mic, the model and Ollama. `yap file clip.m4a` transcribes a recording.
 - Restart: `launchctl kickstart -k gui/$(id -u)/dev.rileygramlich.yap`
+- **The bubble**: a light-blue mic floats at the bottom-centre of every screen and
+  Space, like Wispr Flow's bar, and never takes focus from what you're typing in.
+  Click it and it opens into a pill with a live waveform: ✓ (or the waveform) types
+  what you said, ✕ throws it away. It follows the hotkey too. Drag it anywhere;
+  `bubble = false` in the settings hides it.
 - Clicked away while talking? If no text box has the cursor when you let go, the
   words stay on the clipboard (with a "Copied" notification) so you can paste them.
 

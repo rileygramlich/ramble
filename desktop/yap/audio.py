@@ -13,6 +13,7 @@ class Recorder:
         self._chunks: list[np.ndarray] = []
         self._lock = threading.Lock()
         self._stream = None
+        self.level = 0.0  # loudness of the latest ~10 ms, for a live waveform
 
     @property
     def recording(self) -> bool:
@@ -29,6 +30,7 @@ class Recorder:
     def _take(self, data, frames, time, status):
         with self._lock:
             self._chunks.append(data.copy())
+        self.level = float(np.sqrt(np.mean(data**2)))
 
     def stop(self) -> np.ndarray:
         stream, self._stream = self._stream, None

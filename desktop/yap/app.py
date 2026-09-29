@@ -14,7 +14,7 @@ from datetime import datetime
 
 from . import cleanup
 from .audio import Recorder, is_speech
-from .config import DATA_DIR, IS_LINUX, Config
+from .config import DATA_DIR, IS_LINUX, IS_MAC, Config
 from .output import paste, press_enter, sound
 from .transcribe import SAMPLE_RATE, Transcriber
 
@@ -67,6 +67,9 @@ class Dictation:
         self.jobs: queue.Queue = queue.Queue()
         self.pressed_at: float | None = None
         self.hands_free = False
+        # Something on screen showing the state, e.g. the Mac bubble: it gets
+        # .listening(), .writing() and .idle(), from any thread.
+        self.ui = None
 
     # -- hotkey -------------------------------------------------------------
     def on_press(self, key) -> None:
@@ -100,6 +103,27 @@ class Dictation:
         else:
             self._finish()
 
+    # -- clicks on the bubble --------------------------------------------------
+    def toggle(self) -> None:
+        """A click: start hands-free dictation, or finish the one that's going."""
+        if self.recorder.recording:
+            self.hands_free = False
+            self._finish()
+        else:
+            self._begin()
+            self.hands_free = self.recorder.recording
+
+    def cancel(self) -> None:
+        """✕: stop listening and throw the recording away."""
+        if self.recorder.recording:
+            self.recorder.stop()
+        self.hands_free = False
+        self._show("idle")
+
+    def _show(self, state: str) -> None:
+        if self.ui is not None:
+            getattr(self.ui, state)()
+
     def _is_hotkey(self, key) -> bool:
         return getattr(key, "name", None) == self.config.hotkey or str(key) == f"Key.{self.config.hotkey}"
 
@@ -113,39 +137,48 @@ class Dictation:
             return
         if self.config.sounds:
             sound("start")
+        self._show("listening")
         self.pipeline.warm()
 
     def _finish(self) -> None:
         audio = self.recorder.stop()
         if self.config.sounds:
             sound("stop")
+        self._show("writing")
         self.jobs.put(audio)
 
     # -- worker -------------------------------------------------------------
     def work(self) -> None:
         while True:
             audio = self.jobs.get()
-            if not is_speech(audio):
-                continue
-            started = time.monotonic()
             try:
-                raw, text, action = self.pipeline.run(audio)
-            except Exception as e:
-                print(f"! transcription failed: {e}", flush=True)
-                if self.config.sounds:
-                    sound("error")
-                continue
-            if not text and not action:
-                continue
-            took = time.monotonic() - started
-            print(f"✓ {took:.1f}s  {text}" + (f"  [{action}]" if action else ""), flush=True)
-            # Before Enter/Send, no trailing space: it would end up in the message.
-            landed = paste(text + ("" if action else " "), restore=self.config.restore_clipboard) if text else True
-            if action and landed:
-                time.sleep(0.15)  # let the app take the paste before the Enter
-                press_enter()
-            if self.config.keep_history:
-                self._remember(raw, text, len(audio) / SAMPLE_RATE, took)
+                self._handle(audio)
+            finally:
+                if not self.recorder.recording and self.jobs.empty():
+                    self._show("idle")
+
+    def _handle(self, audio) -> None:
+        if not is_speech(audio):
+            return
+        started = time.monotonic()
+        try:
+            raw, text, action = self.pipeline.run(audio)
+        except Exception as e:
+            print(f"! transcription failed: {e}", flush=True)
+            if self.config.sounds:
+                sound("error")
+            return
+        if not text and not action:
+            return
+        took = time.monotonic() - started
+        print(f"✓ {took:.1f}s  {text}" + (f"  [{action}]" if action else ""), flush=True)
+        # Before Enter/Send, no trailing space: it would end up in the message.
+        landed = paste(text + ("" if action else " "), restore=self.config.restore_clipboard) if text else True
+        if action and landed:
+            time.sleep(0.15)  # let the app take the paste before the Enter
+            press_enter()
+        if self.config.keep_history:
+            self._remember(raw, text, len(audio) / SAMPLE_RATE, took)
 
     def _remember(self, raw: str, text: str, seconds: float, took: float) -> None:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -171,8 +204,20 @@ class Dictation:
                   "  Fix: sudo usermod -aG input $USER, then log out and back in.", flush=True)
         from pynput import keyboard
 
+        listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        if IS_MAC and self.config.bubble:
+            try:
+                from . import bubble_mac
+            except ImportError as e:
+                print(f"! no bubble ({e}); the hotkey still works", flush=True)
+            else:
+                # AppKit has to own the main thread, so the hotkey listens on its own.
+                listener.start()
+                self._ready()
+                bubble_mac.run(self)
+                return
         self._ready()
-        with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
+        with listener:
             listener.join()
 
     def _ready(self) -> None:

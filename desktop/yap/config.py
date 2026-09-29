@@ -46,6 +46,9 @@ class Config:
     serve_host: str = "127.0.0.1"  # set to this machine's Tailscale address
     serve_port: int = 8723
 
+    # Mac: a Wispr-style bubble at the bottom of the screen. Click to talk.
+    bubble: bool = True
+
     sounds: bool = True
     keep_history: bool = True  # every dictation is appended to DATA_DIR/history.jsonl
     restore_clipboard: bool = True
@@ -71,6 +74,7 @@ EXAMPLE = """\
 # model = ""                # blank = engine default
 # cleanup = "ollama"        # ollama, rules, or off
 # ollama_model = "qwen2.5:1.5b"
+# bubble = true             # Mac: the floating mic at the bottom of the screen
 
 # Words Whisper tends to get wrong: names, products, jargon.
 vocabulary = ["Tommy Games", "Quiddler", "Tailscale", "Gramlich"]
