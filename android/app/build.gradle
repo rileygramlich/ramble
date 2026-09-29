@@ -19,10 +19,29 @@ android {
         }
     }
 
+    // The release key lives outside git, in ~/.config/yap-signing/keystore.properties
+    // (or wherever YAP_SIGNING points). Every release is signed with it, so a new
+    // APK installs over the last one whichever machine built it. Back it up: lose
+    // it and the next release needs an uninstall.
+    def signing = new Properties()
+    def signingFile = file(System.getenv('YAP_SIGNING') ?: "${System.getProperty('user.home')}/.config/yap-signing/keystore.properties")
+    if (signingFile.exists()) signingFile.withInputStream { signing.load(it) }
+
+    signingConfigs {
+        release {
+            if (signing.storeFile) {
+                storeFile file(signing.storeFile)
+                storePassword signing.storePassword
+                keyAlias signing.keyAlias
+                keyPassword signing.keyPassword
+            }
+        }
+    }
+
     buildTypes {
         // whisper is unusably slow unoptimised, so debug builds compile native code in release mode too.
         debug { externalNativeBuild { cmake { arguments '-DCMAKE_BUILD_TYPE=Release' } } }
-        release { minifyEnabled false }
+        release { minifyEnabled false; signingConfig signing.storeFile ? signingConfigs.release : null }
     }
 
     externalNativeBuild {

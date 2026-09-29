@@ -127,8 +127,15 @@ Build it yourself (JDK 21 and the Android SDK/NDK; on Hermes they're already in
 cd android
 ./scripts/fetch-deps.sh          # whisper.cpp source + the speech model (not in git)
 export JAVA_HOME=$(ls -d ~/.local/share/android-toolchain/jdk-21*) ANDROID_HOME=~/Android/Sdk
-./gradlew assembleDebug          # → app/build/outputs/apk/debug/app-debug.apk
+./gradlew assembleRelease        # → app/build/outputs/apk/release/app-release.apk
 ```
+
+Releases are signed with the Yap release key, which is kept out of git in
+`~/.config/yap-signing/` (`yap-release.jks` plus `keystore.properties`, or set
+`YAP_SIGNING` to another properties file). Copy that folder to any machine that
+builds releases, and keep a backup: every APK signed with it installs over the
+last one, and without it the next release needs an uninstall. Without the key,
+`assembleRelease` gives an unsigned APK; `assembleDebug` still works for testing.
 
 The native build targets arm64 phones with the armv8.2 `fp16` and `dotprod`
 extensions, which covers roughly everything from 2018 on (Snapdragon 845 and
