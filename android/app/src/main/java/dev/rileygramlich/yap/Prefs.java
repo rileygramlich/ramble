@@ -23,12 +23,12 @@ final class Prefs {
     /** Names and jargon, comma separated, that Whisper should expect. */
     String vocabulary() { return sp.getString("vocabulary", ""); }
 
-    /** Where you last dragged the bubble. */
+    /** Where you last dragged the bubble: which edge, and how far (px) above the keyboard. */
     boolean bubbleLeft() { return sp.getBoolean("bubble_left", false); }
-    int bubbleY() { return sp.getInt("bubble_y", -1); }
+    int bubbleLift() { return sp.getInt("bubble_lift", -1); }
 
-    void saveBubble(boolean left, int y) {
-        sp.edit().putBoolean("bubble_left", left).putInt("bubble_y", y).apply();
+    void saveBubble(boolean left, int lift) {
+        sp.edit().putBoolean("bubble_left", left).putInt("bubble_lift", lift).apply();
     }
 
     void save(String speech, String url, String model, String vocabulary) {

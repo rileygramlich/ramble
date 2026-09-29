@@ -21,7 +21,7 @@ key, speak, let go, and tidy text appears wherever your cursor is.
 
 | | Mac (`desktop/`) | Android (`android/`) |
 |---|---|---|
-| How you use it | Click the light-blue bubble at the bottom of the screen, talk, click ✓. Or hold **Right Option ⌥**, talk, let go. | A floating mic bubble over your normal keyboard: tap, talk, tap again and it types. Or use Yap as a voice keyboard. |
+| How you use it | Click the light-blue bubble at the bottom of the screen, talk, click ✓. Or hold **Right Option ⌥**, talk, let go. | A small mic that sits just above your normal keyboard whenever it's open: tap, talk, tap ✓ and it types. Or use Yap as a voice keyboard. |
 | Speech model | `whisper-large-v3-turbo` on Apple's MLX | `large-v3-turbo` on Art over Tailscale; away from home `ggml-base.en-q5_1` on the phone (57 MB, bundled) |
 | Tidy-up model | Ollama on the Mac | On Art with the speech, over Tailscale; otherwise rules only |
 
@@ -129,15 +129,28 @@ GPU with working drivers is several times faster. Change the model with
 ## Android
 
 Install `yap.apk`, open **Yap**, and do the two steps: allow the microphone and
-turn on the **Yap bubble** (Settings → Accessibility). A mic bubble then floats
-beside any text box you're typing in, and your normal keyboard stays. Tap it,
-talk, and tap it again, or hold it and let go. Drag it to move it. Because the
+turn on the **Yap bubble** (Settings → Accessibility). Like Wispr Flow's, the
+bubble only appears while a keyboard is open: a small, see-through light-blue mic
+resting at the screen edge just above the keyboard, and your normal keyboard
+stays. Tap it and it opens into a small see-through pill with a waveform: tap ✓
+(or the waveform) to type what you said, ✕ to throw it away. Or hold the mic and
+let go. Drag it to switch sides or change how high above the keyboard it sits.
+It stays out of the way of the Yap keyboard, which has its own mic. Because the
 APK isn't from the Play Store, Android 13+ greys the switch out at first: open
 Yap's App info, tap ⋮ → **Allow restricted settings**, then turn it on.
 
+The words go straight into the text box without touching your clipboard. A
+few boxes (web pages, password fields, boxes showing a placeholder) only accept
+a paste. For those the text passes through the clipboard for a moment, marked
+sensitive so the keyboard doesn't offer it as a suggestion, and is then cleared.
 Tapped out of the text box while talking? The bubble keeps listening, and when
 you finish, the words are copied to the clipboard ("Copied: no text box had the
 cursor") so you can paste them wherever you like.
+
+The Yap app shows your last 100 dictations, newest first, from both the bubble
+and the keyboard. They're kept only on the phone. Tap one to copy it, hold one
+to delete it, or clear them all. The setup steps and the speech settings are
+under ⚙.
 
 Prefer a keyboard? Turn on the Yap keyboard and switch to it instead. 🌐 goes
 back to your normal keyboard; long-press it to pick one.
