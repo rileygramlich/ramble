@@ -296,7 +296,7 @@ public class YapBubble extends AccessibilityService {
         AccessibilityNodeInfo field = findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
         if (field == null || !field.isEditable()) {
             copy(text);
-            toast("No text box selected, so it's on the clipboard");
+            toast("Copied: no text box had the cursor");
             return;
         }
         CharSequence current = field.isPassword() ? null : field.isShowingHintText() ? "" : field.getText();
