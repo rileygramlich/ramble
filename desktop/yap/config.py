@@ -11,6 +11,7 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 IS_MAC = platform.system() == "Darwin"
+IS_LINUX = platform.system() == "Linux"
 IS_APPLE_SILICON = IS_MAC and platform.machine() == "arm64"
 
 CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "yap"

@@ -32,9 +32,16 @@ def paste(text: str, restore: bool = True) -> None:
 
 
 def _press_paste() -> None:
-    if not IS_MAC and os.environ.get("WAYLAND_DISPLAY") and shutil.which("wtype"):
-        subprocess.run(["wtype", "-M", "ctrl", "v", "-m", "ctrl"], check=False)
-        return
+    if not IS_MAC and os.environ.get("WAYLAND_DISPLAY"):
+        # ydotool works on every compositor (it needs ydotoold running); wtype
+        # works on wlroots ones like Sway and Hyprland but not GNOME or KDE.
+        # 29 and 47 are the evdev codes for left Ctrl and V.
+        if shutil.which("ydotool") and subprocess.run(
+                ["ydotool", "key", "29:1", "47:1", "47:0", "29:0"], capture_output=True).returncode == 0:
+            return
+        if shutil.which("wtype"):
+            subprocess.run(["wtype", "-M", "ctrl", "v", "-m", "ctrl"], check=False)
+            return
     from pynput.keyboard import Controller, Key
 
     kb = Controller()

@@ -36,8 +36,12 @@ for the Python program it prints. Yap needs those to hear the hotkey and press â
 - `yap check` tests the mic, the model and Ollama. `yap file clip.m4a` transcribes a recording.
 - Restart: `launchctl kickstart -k gui/$(id -u)/dev.rileygramlich.yap`
 
-It also runs on Linux (`uv run yap` in `desktop/`, using faster-whisper on the CPU),
-but global hotkeys don't work under Wayland.
+It also runs on Linux (`uv run yap` in `desktop/`, using faster-whisper on the CPU).
+Install `libportaudio2`. On Wayland, Yap reads the hotkey straight from
+`/dev/input`, so add yourself to the `input` group (`sudo usermod -aG input $USER`,
+then log in again), and it pastes with `ydotool`, so keep `ydotoold` running. To start
+it at login: `ln -s "$PWD/linux/yap.service" ~/.config/systemd/user/ && systemctl --user enable --now yap`.
+Log: `journalctl --user -u yap -f`.
 
 ## Android
 

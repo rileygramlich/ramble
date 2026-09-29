@@ -14,7 +14,7 @@ from datetime import datetime
 
 from . import cleanup
 from .audio import Recorder, is_speech
-from .config import DATA_DIR, Config
+from .config import DATA_DIR, IS_LINUX, Config
 from .output import paste, sound
 from .transcribe import SAMPLE_RATE, Transcriber
 
@@ -64,8 +64,16 @@ class Dictation:
 
     # -- hotkey -------------------------------------------------------------
     def on_press(self, key) -> None:
-        if not self._is_hotkey(key) or self.pressed_at is not None:
-            return  # not ours, or key-repeat while held
+        if self._is_hotkey(key):
+            self.down()
+
+    def on_release(self, key) -> None:
+        if self._is_hotkey(key):
+            self.up()
+
+    def down(self) -> None:
+        if self.pressed_at is not None:
+            return  # key-repeat while held
         self.pressed_at = time.monotonic()
         if self.hands_free:  # this press ends a hands-free dictation
             self.hands_free = False
@@ -73,8 +81,8 @@ class Dictation:
             return
         self._begin()
 
-    def on_release(self, key) -> None:
-        if not self._is_hotkey(key) or self.pressed_at is None:
+    def up(self) -> None:
+        if self.pressed_at is None:
             return
         held = time.monotonic() - self.pressed_at
         self.pressed_at = None
@@ -138,12 +146,24 @@ class Dictation:
 
     # -- main ---------------------------------------------------------------
     def run(self) -> None:
-        from pynput import keyboard
-
         print(f"Loading {self.pipeline.transcribe.model} …", flush=True)
         self.pipeline.transcribe.load()
         self.pipeline.warm()
         threading.Thread(target=self.work, daemon=True).start()
-        print(f"Ready. Hold [{self.config.hotkey}] to talk, or tap it for hands-free.", flush=True)
+        if IS_LINUX:
+            from . import evdev_keys
+            code, devices = evdev_keys.keyboards(self.config.hotkey)
+            if devices:
+                self._ready()
+                evdev_keys.listen(devices, code, self.down, self.up)
+                return
+            print("! can't read any keyboard in /dev/input, so the hotkey only works in X11 apps.\n"
+                  "  Fix: sudo usermod -aG input $USER, then log out and back in.", flush=True)
+        from pynput import keyboard
+
+        self._ready()
         with keyboard.Listener(on_press=self.on_press, on_release=self.on_release) as listener:
             listener.join()
+
+    def _ready(self) -> None:
+        print(f"Ready. Hold [{self.config.hotkey}] to talk, or tap it for hands-free.", flush=True)
