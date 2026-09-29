@@ -1,6 +1,6 @@
 [project]
 name = "yap"
-version = "0.3.0"
+version = "0.4.0"
 description = "Private, free, on-device dictation: hold a key, talk, and it types."
 requires-python = ">=3.11,<3.14"
 dependencies = [
