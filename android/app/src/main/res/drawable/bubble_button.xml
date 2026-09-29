@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ✕ and ✓ inside the pill: a slightly deeper circle so they read as buttons. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/bubble_live"/>
+</shape>

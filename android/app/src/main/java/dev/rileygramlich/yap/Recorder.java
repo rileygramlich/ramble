@@ -33,7 +33,7 @@ final class Recorder {
         running = true;
         record.startRecording();
         thread = new Thread(() -> {
-            float[] chunk = new float[Whisper.SAMPLE_RATE / 10];
+            float[] chunk = new float[Whisper.SAMPLE_RATE / 20]; // 50 ms: smooth enough for a live waveform
             while (running) {
                 int n = record.read(chunk, 0, chunk.length, AudioRecord.READ_BLOCKING);
                 if (n <= 0) continue;

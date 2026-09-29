@@ -16,9 +16,9 @@ key, speak, let go, and tidy text appears wherever your cursor is.
 
 | | Mac (`desktop/`) | Android (`android/`) |
 |---|---|---|
-| How you use it | Hold **Right Option ⌥**, talk, let go and it pastes. Tap for hands-free. | A voice keyboard. Hold the mic, talk, let go and it types. Tap for hands-free. |
+| How you use it | Hold **Right Option ⌥**, talk, let go and it pastes. Tap for hands-free. | A floating mic bubble over your normal keyboard: tap, talk, tap again and it types. Or use Yap as a voice keyboard. |
 | Speech model | `whisper-large-v3-turbo` on Apple's MLX | `ggml-base.en-q5_1` in whisper.cpp, bundled (57 MB) |
-| Tidy-up model | Ollama on the Mac | Ollama on Hermes or Artemius over Tailscale, if set; otherwise rules only |
+| Tidy-up model | Ollama on the Mac | Ollama on Art over Tailscale; otherwise rules only |
 
 ## Mac
 
@@ -45,12 +45,19 @@ Log: `journalctl --user -u yap -f`.
 
 ## Android
 
-Install `yap.apk`, open **Yap**, and do the three steps: allow the microphone,
-turn on the keyboard, and switch to it. 🌐 goes back to your normal keyboard;
-long-press it to pick one.
+Install `yap.apk`, open **Yap**, and do the two steps: allow the microphone and
+turn on the **Yap bubble** (Settings → Accessibility). A mic bubble then floats
+beside any text box you're typing in, and your normal keyboard stays. Tap it,
+talk, and tap it again, or hold it and let go. Drag it to move it. Because the
+APK isn't from the Play Store, Android 13+ greys the switch out at first: open
+Yap's App info, tap ⋮ → **Allow restricted settings**, then turn it on.
 
-For smarter tidy-up, enter your Ollama address in the Yap app, for example
-`http://100.112.5.58:11434` for Artemius, with Tailscale on the phone. Ollama only
+Prefer a keyboard? Turn on the Yap keyboard and switch to it instead. 🌐 goes
+back to your normal keyboard; long-press it to pick one.
+
+The smarter tidy-up goes to Ollama on Art (`http://100.112.5.58:11434`) by
+default, so put Tailscale on the phone. Clear the address in the Yap app to stay
+on the phone only. Ollama only
 listens on localhost by default, so on that machine run:
 
 ```bash
@@ -81,6 +88,6 @@ desktop/yap/cleanup.py     rules + Ollama tidy-up (the prompt, examples and safe
 desktop/yap/transcribe.py  Whisper via mlx or faster-whisper
 desktop/yap/app.py         hotkey → record → transcribe → tidy → paste
 desktop/tests/             cleanup tests (uv run pytest)
-android/app/src/main/java  the keyboard; Cleanup.java and Polish.java port cleanup.py, so keep them in step
+android/app/src/main/java  YapBubble (floating mic) and YapKeyboard share Dictation; Cleanup.java and Polish.java port cleanup.py, so keep them in step
 android/app/src/main/cpp   the JNI bridge to whisper.cpp
 ```

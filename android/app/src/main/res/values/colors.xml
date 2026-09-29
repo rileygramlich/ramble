@@ -7,4 +7,8 @@
     <color name="ink_soft">#a9a397</color>
     <color name="accent">#ff6b4a</color>
     <color name="accent_live">#ff3d6e</color>
+    <!-- The floating bubble: light blue with a navy mic, deeper blue while it listens. -->
+    <color name="bubble">#a8dcff</color>
+    <color name="bubble_live">#6cc2ff</color>
+    <color name="bubble_ink">#0b2a45</color>
 </resources>

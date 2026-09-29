@@ -2,4 +2,6 @@
 <resources>
     <string name="app_name">Yap</string>
     <string name="ime_name">Yap voice keyboard</string>
+    <string name="bubble_name">Yap bubble</string>
+    <string name="bubble_description">A floating mic that shows up whenever you\'re typing. Tap it and talk, tap again, and Yap types what you said into the box, with your normal keyboard. Yap only looks for the focused text box so it knows where to put your words. Speech never leaves the phone.</string>
 </resources>

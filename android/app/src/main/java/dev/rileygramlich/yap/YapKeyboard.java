@@ -15,8 +15,6 @@ import android.view.inputmethod.InputConnection;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.TextView;
 
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -119,7 +117,7 @@ public class YapKeyboard extends InputMethodService {
         }
         mic.setActivated(true);
         say("Listening…");
-        warmOllama();
+        Dictation.warm(this);
     }
 
     private void finish() {
@@ -132,12 +130,10 @@ public class YapKeyboard extends InputMethodService {
         }
         busy = true;
         say("Writing…");
-        Prefs prefs = new Prefs(this);
         worker.execute(() -> {
             String text;
             try {
-                String raw = Whisper.run(this, audio, prefs.vocabulary());
-                text = Polish.run(raw, prefs.ollamaUrl(), prefs.ollamaModel(), prefs.vocabulary(), 4000);
+                text = Dictation.run(this, audio);
             } catch (Exception e) {
                 main.post(() -> { busy = false; say("That didn't work: " + e.getMessage()); });
                 return;
@@ -148,26 +144,6 @@ public class YapKeyboard extends InputMethodService {
                 idle();
             });
         });
-    }
-
-    /** Wake the tidy-up model while the person is still talking. */
-    private void warmOllama() {
-        Prefs prefs = new Prefs(this);
-        String url = prefs.ollamaUrl();
-        if (url.isEmpty()) return;
-        new Thread(() -> {
-            try {
-                HttpURLConnection c = (HttpURLConnection) new URL(url.replaceAll("/+$", "") + "/api/generate").openConnection();
-                c.setConnectTimeout(1500);
-                c.setReadTimeout(20000);
-                c.setDoOutput(true);
-                c.setRequestProperty("Content-Type", "application/json");
-                c.getOutputStream().write(("{\"model\":\"" + prefs.ollamaModel() + "\",\"keep_alive\":\"30m\"}").getBytes());
-                c.getResponseCode();
-                c.disconnect();
-            } catch (Exception ignored) {
-            }
-        }, "yap-warm").start();
     }
 
     // -- typing ------------------------------------------------------------------
