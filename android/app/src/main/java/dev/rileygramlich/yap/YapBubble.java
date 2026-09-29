@@ -299,9 +299,32 @@ public class YapBubble extends AccessibilityService {
             toast("Copied: no text box had the cursor");
             return;
         }
-        CharSequence current = field.isPassword() ? null : field.isShowingHintText() ? "" : field.getText();
-        if (current != null && splice(field, current, text)) return;
+        CharSequence current = field.isPassword() ? null : field.getText();
+        if (current != null && isPlaceholder(field, current)) current = "";
+        // Set the text ourselves only when we know exactly where the cursor is. Otherwise
+        // paste, and the app puts it at its own cursor.
+        if (current != null && (current.length() == 0 || cursorInside(field, current)) && splice(field, current, text)) return;
         paste(field, text);
+    }
+
+    /**
+     * Empty boxes often report their grey placeholder as their text: Google Messages
+     * says "Message", and typing after it gave "Message hello". Not every app flags
+     * it as a hint, so also compare against the hint.
+     */
+    private static boolean isPlaceholder(AccessibilityNodeInfo field, CharSequence current) {
+        if (field.isShowingHintText()) return true;
+        CharSequence hint = field.getHintText();
+        return hint != null && hint.length() > 0 && hint.toString().contentEquals(current);
+    }
+
+    /**
+     * A cursor inside real text. Placeholders that slip past isPlaceholder usually report
+     * no cursor, or one at 0, so both of those go the paste route.
+     */
+    private static boolean cursorInside(AccessibilityNodeInfo field, CharSequence current) {
+        int start = field.getTextSelectionStart();
+        return start > 0 && start <= current.length();
     }
 
     /** Put the text in at the cursor directly. Leaves the clipboard alone. */
