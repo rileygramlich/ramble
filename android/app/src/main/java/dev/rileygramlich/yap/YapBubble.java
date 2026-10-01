@@ -5,7 +5,11 @@ import android.accessibilityservice.AccessibilityService;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ClipboardManager;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
@@ -16,6 +20,7 @@ import android.os.Looper;
 import android.os.PersistableBundle;
 import android.os.SystemClock;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
@@ -47,7 +52,10 @@ import java.util.regex.Pattern;
  * other apps and put text into their fields.
  */
 public class YapBubble extends AccessibilityService {
+    private static final String TAG = "Yap";
     private static final long TAP_MS = 300;
+    /** How long to wait before re-reading the box to see if the text stuck. */
+    private static final long VERIFY_MS = 350;
     private static final int SIZE_DP = 40, PILL_DP = 156, BUTTON_DP = 28, EDGE_DP = 4;
     /** See-through at rest on the edge, a little less so while it's working. */
     private static final float IDLE_ALPHA = 0.45f, ACTIVE_ALPHA = 0.8f;
@@ -135,6 +143,24 @@ public class YapBubble extends AccessibilityService {
             }
         });
         check.run();
+        if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) listenForTests();
+    }
+
+    /**
+     * Debug builds only: lets the emulator (which has no working mic) exercise the
+     * typing step. adb shell am broadcast -a dev.rileygramlich.yap.TEST_INSERT --es text "hello"
+     */
+    private void listenForTests() {
+        BroadcastReceiver receiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent intent) {
+                String text = intent.getStringExtra("text");
+                if (text != null) main.post(() -> insert(text + " ", landed -> Log.i(TAG, "test insert landed=" + landed)));
+            }
+        };
+        IntentFilter filter = new IntentFilter("dev.rileygramlich.yap.TEST_INSERT");
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(receiver, filter, Context.RECEIVER_EXPORTED);
+        else registerReceiver(receiver, filter);
     }
 
     @Override
@@ -331,12 +357,16 @@ public class YapBubble extends AccessibilityService {
         main.removeCallbacks(openPill);
         float[] audio = recorder.stop();
         bubble.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);
+        diag("finished recording: " + String.format(java.util.Locale.US, "%.1f", audio.length / (float) Whisper.SAMPLE_RATE) + " s"
+                + (focusedField() == null ? ", no text box focused right now" : ""));
         if (isSilent(audio)) {
+            diag("the recording was pure silence (mic blocked)");
             mode(Mode.IDLE);
             toast("Android gave Yap silence instead of your voice. Open the Yap app once, then try again.");
             return;
         }
         if (!Recorder.isSpeech(audio)) {
+            diag("no speech in the recording, nothing typed");
             mode(Mode.IDLE);
             return;
         }
@@ -347,16 +377,19 @@ public class YapBubble extends AccessibilityService {
             try {
                 said = Dictation.run(this, audio);
             } catch (Exception e) {
-                main.post(() -> { done(); toast("That didn't work: " + e.getMessage()); });
+                main.post(() -> { done(); diag("transcribing failed: " + e.getMessage()); toast("That didn't work: " + e.getMessage()); });
                 return;
             }
             main.post(() -> {
                 done();
                 History.add(this, said.text);
                 // Before Enter/Send, no trailing space: it would end up in the message.
-                boolean landed = said.text.isEmpty() || insert(said.text + (said.action == null ? " " : ""));
-                // A beat later, so the app has the text (and has shown its Send button).
-                if (said.action != null && landed) main.postDelayed(() -> press(said.action), 250);
+                diag("dictation done: " + said.text.length() + " chars" + (said.action != null ? ", then " + said.action : ""));
+                Runnable then = () -> { if (said.action != null) main.postDelayed(() -> press(said.action), 250); };
+                if (said.text.isEmpty()) then.run();
+                // Before Enter/Send, no trailing space: it would end up in the message.
+                // Press it only if the text landed, and a beat later so the app shows its Send button.
+                else insert(said.text + (said.action == null ? " " : ""), landed -> { if (landed) then.run(); });
             });
         });
     }
@@ -375,20 +408,100 @@ public class YapBubble extends AccessibilityService {
     }
 
     // -- typing ------------------------------------------------------------------
-    /** False if the text ended up on the clipboard instead of in a text box. */
-    private boolean insert(String text) {
+    /**
+     * Type the text into whichever box has the cursor, then check it stuck. On a real
+     * phone the keyboard can quietly undo text set from outside (it still holds its own
+     * idea of the word being typed), so each way of typing is verified by re-reading the
+     * box a moment later before trying the next. Calls back with false only if the text
+     * ended up on the clipboard.
+     */
+    private void insert(String text, java.util.function.Consumer<Boolean> done) {
         AccessibilityNodeInfo field = focusedField();
         if (field == null) {
+            diag("no focused text box found, copied instead");
             copy(text.trim());
             toast("Copied: no text box had the cursor");
-            return false;
+            done.accept(false);
+            return;
         }
+        field.refresh();
         CharSequence current = field.isPassword() ? null : field.getText();
-        if (current != null && isPlaceholder(field, current)) current = "";
-        // Set the text ourselves only when we know exactly where the cursor is. Otherwise
-        // paste, and the app puts it at its own cursor.
-        if (current != null && (current.length() == 0 || cursorInside(field, current)) && splice(field, current, text)) return true;
-        return paste(field, text);
+        boolean placeholder = current != null && isPlaceholder(field, current);
+        if (placeholder) current = "";
+        int before = current == null ? -1 : current.length();
+        diag("box: " + field.getClassName() + " in " + field.getPackageName() + ", " + (current == null ? "text unreadable" : before + " chars")
+                + ", cursor " + field.getTextSelectionStart() + (placeholder ? ", showing placeholder" : ""));
+
+        // 1. Set the text ourselves, when we know where the cursor is.
+        boolean canSplice = current != null && (current.length() == 0 || cursorInside(field, current));
+        if (canSplice && splice(field, current, text)) {
+            main.postDelayed(() -> {
+                if (stuck(field, text, before)) {
+                    diag("typed directly: stuck");
+                    done.accept(true);
+                } else {
+                    diag("typed directly but the app undid it, pasting instead");
+                    pasteThenCheck(field, text, before, done);
+                }
+            }, VERIFY_MS);
+            return;
+        }
+        diag(canSplice ? "app refused direct typing, pasting instead" : "cursor position unclear, pasting");
+        pasteThenCheck(field, text, before, done);
+    }
+
+    /** 2. Paste, check, and as a last resort leave the text on the clipboard and say so. */
+    private void pasteThenCheck(AccessibilityNodeInfo field, String text, int before, java.util.function.Consumer<Boolean> done) {
+        ClipboardManager clipboard = getSystemService(ClipboardManager.class);
+        ClipData previous = clipboard.getPrimaryClip(); // null when Android won't let Yap read it
+        ClipData passing = ClipData.newPlainText("Yap", text);
+        if (Build.VERSION.SDK_INT >= 33) {
+            PersistableBundle extras = new PersistableBundle();
+            extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
+            passing.getDescription().setExtras(extras);
+        }
+        clipboard.setPrimaryClip(passing);
+        boolean accepted = field.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+        main.postDelayed(() -> {
+            if (accepted && stuck(field, text, before)) {
+                diag("pasted: stuck");
+                // Don't leave the dictation on the clipboard (it's in Yap's history anyway).
+                if (previous != null) clipboard.setPrimaryClip(previous);
+                else if (Build.VERSION.SDK_INT >= 28) clipboard.clearPrimaryClip();
+                done.accept(true);
+                return;
+            }
+            diag(accepted ? "paste accepted but nothing appeared, left on clipboard" : "app refused paste, left on clipboard");
+            copy(text.trim());
+            toast("Couldn't type into " + appName(field) + ", so it's on the clipboard. Long-press the box to paste.");
+            done.accept(false);
+        }, VERIFY_MS);
+    }
+
+    /**
+     * Did the text land? Re-read the box. Password boxes can't be read and some apps
+     * report nothing at all; then trust the app, as before.
+     */
+    private static boolean stuck(AccessibilityNodeInfo field, String text, int before) {
+        if (!field.refresh()) return true; // the box went away (e.g. the message was sent)
+        if (field.isPassword()) return true;
+        CharSequence now = field.getText();
+        if (now == null) return true;
+        String want = text.trim();
+        return now.toString().contains(want) || (before >= 0 && now.length() >= before + want.length());
+    }
+
+    private String appName(AccessibilityNodeInfo field) {
+        try {
+            CharSequence pkg = field.getPackageName();
+            return getPackageManager().getApplicationLabel(getPackageManager().getApplicationInfo(String.valueOf(pkg), 0)).toString();
+        } catch (Exception e) {
+            return "that app";
+        }
+    }
+
+    private void diag(String message) {
+        Diagnostics.log(this, message);
     }
 
     /**
@@ -427,37 +540,6 @@ public class YapBubble extends AccessibilityService {
         cursor.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, start + piece.length());
         cursor.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, start + piece.length());
         field.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, cursor);
-        return true;
-    }
-
-    /**
-     * For fields that won't take text directly (web pages, password boxes, boxes that
-     * might be showing a placeholder): the text passes through the clipboard for a
-     * moment, then the clipboard goes back to how it was. It's marked sensitive while
-     * it's there, so the keyboard doesn't offer it as a paste suggestion and Android's
-     * "Copied" preview doesn't show it.
-     */
-    private boolean paste(AccessibilityNodeInfo field, String text) {
-        ClipboardManager clipboard = getSystemService(ClipboardManager.class);
-        ClipData previous = clipboard.getPrimaryClip(); // null when Android won't let Yap read it
-        ClipData passing = ClipData.newPlainText("Yap", text);
-        if (Build.VERSION.SDK_INT >= 33) {
-            PersistableBundle extras = new PersistableBundle();
-            extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
-            passing.getDescription().setExtras(extras);
-        }
-        clipboard.setPrimaryClip(passing);
-        if (!field.performAction(AccessibilityNodeInfo.ACTION_PASTE)) {
-            copy(text.trim());
-            toast("Couldn't type into that box, so it's on the clipboard");
-            return false;
-        }
-        main.postDelayed(() -> {
-            // Android usually hides the old clipboard from Yap. Then the best we can do
-            // is not leave the dictation sitting there (it's in Yap's history anyway).
-            if (previous != null) clipboard.setPrimaryClip(previous);
-            else if (Build.VERSION.SDK_INT >= 28) clipboard.clearPrimaryClip();
-        }, 500);
         return true;
     }
 

@@ -45,5 +45,23 @@
         <TextView style="@style/Note" android:text="Names and jargon, separated by commas." />
         <EditText android:id="@+id/vocabulary" style="@style/Field" android:singleLine="false"
             android:hint="Tommy Games, Quiddler, Katharina" android:inputType="textMultiLine" />
+
+        <TextView style="@style/Heading" android:text="Diagnostics" />
+        <TextView style="@style/Note"
+            android:text="What the bubble did with your last dictations: which box it found, how it typed, and whether the text stuck. It never stores what you said. If something goes wrong, tap Copy report and send it to Riley." />
+        <TextView android:id="@+id/diag_info" style="@style/Note" android:paddingTop="10dp" android:textIsSelectable="true" />
+        <TextView android:id="@+id/diag_log"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="8dp" android:padding="14dp"
+            android:background="@drawable/card" android:textColor="@color/ink_soft"
+            android:textSize="12sp" android:fontFamily="monospace" android:textIsSelectable="true"
+            android:lineSpacingMultiplier="1.2" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal" android:paddingTop="4dp">
+            <Button android:id="@+id/diag_copy" style="@style/Step" android:layout_width="0dp" android:layout_weight="1"
+                android:layout_marginEnd="8dp" android:gravity="center" android:text="Copy report" />
+            <Button android:id="@+id/diag_clear" style="@style/Step" android:layout_width="0dp" android:layout_weight="1"
+                android:gravity="center" android:text="Clear" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>
