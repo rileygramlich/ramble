@@ -1,0 +1,17 @@
+# Optional: let your phone use this computer's bigger speech model, on your
+# Tailscale address only. From the desktop/ folder, install with:
+#   ln -s "$PWD/linux/ramble-serve.service" ~/.config/systemd/user/ && systemctl --user enable --now ramble-serve
+# (Change WorkingDirectory if your clone isn't at ~/ramble/desktop.)
+[Unit]
+Description=Ramble speech server for your phone
+After=network-online.target ollama.service
+
+[Service]
+WorkingDirectory=%h/ramble/desktop
+# Tailscale may come up after us; keep retrying until its address exists.
+ExecStart=/bin/sh -c 'exec %h/.local/bin/uv run --frozen ramble serve "$(tailscale ip -4)"'
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

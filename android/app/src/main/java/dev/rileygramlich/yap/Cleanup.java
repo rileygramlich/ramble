@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 /**
  * The instant, always-on tidy-up: spoken commands ("new line", "scratch that"),
- * filler words, stutters and spacing. A port of desktop/yap/cleanup.py rules();
+ * filler words, stutters and spacing. A port of desktop/ramble/cleanup.py rules();
  * keep the two in step.
  */
 final class Cleanup {

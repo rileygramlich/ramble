@@ -10,8 +10,8 @@ import types
 import numpy as np
 import pytest
 
-from yap import app as app_module
-from yap.config import Config
+from ramble import app as app_module
+from ramble.config import Config
 
 
 # -- dictation states, as any UI sees them -------------------------------------------
@@ -173,8 +173,8 @@ def bubble_module(monkeypatch):
     for name, module in {"AppKit": appkit, "Foundation": foundation, "objc": objc,
                          "PyObjCTools": tools, "PyObjCTools.AppHelper": helper}.items():
         monkeypatch.setitem(sys.modules, name, module)
-    monkeypatch.delitem(sys.modules, "yap.bubble_mac", raising=False)
-    import yap.bubble_mac as bubble_mac
+    monkeypatch.delitem(sys.modules, "ramble.bubble_mac", raising=False)
+    import ramble.bubble_mac as bubble_mac
     return bubble_mac
 
 

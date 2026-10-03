@@ -22,7 +22,7 @@ TAP = 0.3  # seconds; a press shorter than this is a tap, not a hold
 
 
 class Pipeline:
-    """Everything after the audio is captured. Also used by `yap file`."""
+    """Everything after the audio is captured. Also used by `ramble file`."""
 
     def __init__(self, config: Config):
         self.config = config
@@ -184,7 +184,7 @@ class Dictation:
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         line = {"at": datetime.now().isoformat(timespec="seconds"), "seconds": round(seconds, 1),
                 "took": round(took, 2), "raw": raw, "text": text}
-        with open(DATA_DIR / "history.jsonl", "a") as f:
+        with open(DATA_DIR / "history.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(line, ensure_ascii=False) + "\n")
 
     # -- main ---------------------------------------------------------------

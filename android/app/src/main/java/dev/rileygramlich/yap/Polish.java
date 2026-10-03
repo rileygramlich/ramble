@@ -19,7 +19,7 @@ import java.util.regex.Pattern;
  * The optional second pass: a small model on your own Ollama server (over
  * Tailscale) fixes what rules can't. Any failure, or a reply that no longer
  * looks like the same dictation, falls back to the rules output. A port of
- * desktop/yap/cleanup.py polish(); keep the prompt and examples in step.
+ * desktop/ramble/cleanup.py polish(); keep the prompt and examples in step.
  */
 final class Polish {
     private static final String PROMPT = "You tidy up dictated text. Reply with the cleaned text only.\n\n"

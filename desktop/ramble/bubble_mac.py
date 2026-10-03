@@ -41,7 +41,7 @@ BLUE, LIVE, INK = (0xA8, 0xDC, 0xFF), (0x6C, 0xC2, 0xFF), (0x0B, 0x2A, 0x45)
 
 
 def run(dictation) -> None:
-    """Show the bubble and run the Mac event loop. Blocks until Yap quits."""
+    """Show the bubble and run the Mac event loop. Blocks until Ramble quits."""
     app = NSApplication.sharedApplication()
     app.setActivationPolicy_(NSApplicationActivationPolicyAccessory)  # no Dock icon
     dictation.ui = Bubble(dictation)
@@ -64,7 +64,7 @@ class BubbleView(NSView):
         return self
 
     def acceptsFirstMouse_(self, event):
-        return True  # one click works even though Yap is never the active app
+        return True  # one click works even though Ramble is never the active app
 
     def drawRect_(self, rect):
         if self.bubble is not None:

@@ -4,7 +4,7 @@ import types
 
 import pytest
 
-from yap import output
+from ramble import output
 
 
 @pytest.fixture

@@ -40,7 +40,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Pattern;
 
 /**
- * The Yap bubble: a small light-blue mic over every app, like Wispr Flow's, so
+ * The Ramble bubble: a small light-blue mic over every app, like Wispr Flow's, so
  * you keep your normal keyboard. Like Wispr Flow's, it only appears while a
  * keyboard is open, resting see-through at the screen edge just above it.
  * Tap it and it opens into a small see-through pill with a live waveform:
@@ -52,7 +52,7 @@ import java.util.regex.Pattern;
  * other apps and put text into their fields.
  */
 public class YapBubble extends AccessibilityService {
-    private static final String TAG = "Yap";
+    private static final String TAG = "Ramble";
     private static final long TAP_MS = 300;
     /** How long to wait before re-reading the box to see if the text stuck. */
     private static final long VERIFY_MS = 350;
@@ -99,7 +99,7 @@ public class YapBubble extends AccessibilityService {
 
         mic = new ImageView(this);
         mic.setImageResource(R.drawable.ic_bubble_mic);
-        mic.setContentDescription("Yap: tap to talk");
+        mic.setContentDescription("Ramble: tap to talk");
         bubble.addView(mic, new LinearLayout.LayoutParams(dp(20), dp(20)));
 
         cancelButton = button(R.drawable.ic_bubble_cancel, "Cancel");
@@ -188,7 +188,7 @@ public class YapBubble extends AccessibilityService {
     }
 
     /**
-     * Where the keyboard is, or null if none is open. Yap's own keyboard counts as
+     * Where the keyboard is, or null if none is open. Ramble's own keyboard counts as
      * none: it has its own big mic.
      */
     private Rect keyboardBounds() {
@@ -329,7 +329,7 @@ public class YapBubble extends AccessibilityService {
     // -- dictation ---------------------------------------------------------------
     private void begin() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            toast("Yap needs the microphone. Opening setup…");
+            toast("Ramble needs the microphone. Opening setup…");
             startActivity(new Intent(this, SetupActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             mode(Mode.IDLE);
             return;
@@ -362,7 +362,7 @@ public class YapBubble extends AccessibilityService {
         if (isSilent(audio)) {
             diag("the recording was pure silence (mic blocked)");
             mode(Mode.IDLE);
-            toast("Android gave Yap silence instead of your voice. Open the Yap app once, then try again.");
+            toast("Android gave Ramble silence instead of your voice. Open the Ramble app once, then try again.");
             return;
         }
         if (!Recorder.isSpeech(audio)) {
@@ -453,8 +453,8 @@ public class YapBubble extends AccessibilityService {
     /** 2. Paste, check, and as a last resort leave the text on the clipboard and say so. */
     private void pasteThenCheck(AccessibilityNodeInfo field, String text, int before, java.util.function.Consumer<Boolean> done) {
         ClipboardManager clipboard = getSystemService(ClipboardManager.class);
-        ClipData previous = clipboard.getPrimaryClip(); // null when Android won't let Yap read it
-        ClipData passing = ClipData.newPlainText("Yap", text);
+        ClipData previous = clipboard.getPrimaryClip(); // null when Android won't let Ramble read it
+        ClipData passing = ClipData.newPlainText("Ramble", text);
         if (Build.VERSION.SDK_INT >= 33) {
             PersistableBundle extras = new PersistableBundle();
             extras.putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true);
@@ -465,7 +465,7 @@ public class YapBubble extends AccessibilityService {
         main.postDelayed(() -> {
             if (accepted && stuck(field, text, before)) {
                 diag("pasted: stuck");
-                // Don't leave the dictation on the clipboard (it's in Yap's history anyway).
+                // Don't leave the dictation on the clipboard (it's in Ramble's history anyway).
                 if (previous != null) clipboard.setPrimaryClip(previous);
                 else if (Build.VERSION.SDK_INT >= 28) clipboard.clearPrimaryClip();
                 done.accept(true);
@@ -589,7 +589,7 @@ public class YapBubble extends AccessibilityService {
     }
 
     private void copy(String text) {
-        getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Yap", text));
+        getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Ramble", text));
     }
 
     // -- feedback ----------------------------------------------------------------

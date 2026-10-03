@@ -19,7 +19,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * The Yap keyboard: a big mic button plus the few keys you need around
+ * The Ramble keyboard: a big mic button plus the few keys you need around
  * dictation. Hold the mic to talk and let go to type it; tap it to talk
  * hands-free and tap again to finish.
  */
@@ -105,7 +105,7 @@ public class YapKeyboard extends InputMethodService {
 
     private void begin() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            say("Yap needs the microphone. Opening setup…");
+            say("Ramble needs the microphone. Opening setup…");
             startActivity(new Intent(this, SetupActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             return;
         }

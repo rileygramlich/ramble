@@ -11,7 +11,7 @@ import java.util.List;
 
 /**
  * The last 100 things you said, newest first, from the bubble and the keyboard.
- * Kept only on the phone, and shown on Yap's main screen.
+ * Kept only on the phone, and shown on Ramble's main screen.
  */
 final class History {
     static final int LIMIT = 100;

@@ -1,7 +1,7 @@
 import pytest
 
-from yap import cleanup
-from yap.cleanup import rules
+from ramble import cleanup
+from ramble.cleanup import rules
 
 
 @pytest.mark.parametrize("raw, want", [
@@ -46,7 +46,7 @@ def test_unreachable_ollama_falls_back_to_rules():
 # -- spoken commands at the end ---------------------------------------------------
 import pytest  # noqa: E402
 
-from yap.cleanup import command  # noqa: E402
+from ramble.cleanup import command  # noqa: E402
 
 
 @pytest.mark.parametrize("heard, expected", [
