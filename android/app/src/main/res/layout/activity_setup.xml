@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Yap's main screen: a line on whether it's ready, a box to try it in, and your history. -->
+<!-- Ramble's main screen: a line on whether it's ready, a box to try it in, and your history. -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:fitsSystemWindows="true">
@@ -10,7 +10,7 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
             android:orientation="horizontal" android:gravity="center_vertical">
             <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
-                android:text="yap" android:textSize="30sp" android:textStyle="bold" android:letterSpacing="-0.02"
+                android:text="ramble" android:textSize="30sp" android:textStyle="bold" android:letterSpacing="-0.02"
                 android:textColor="@color/accent" />
             <ImageButton android:id="@+id/open_settings"
                 android:layout_width="48dp" android:layout_height="48dp"
@@ -26,7 +26,7 @@
             <Button android:id="@+id/step_mic" style="@style/Step" />
             <Button android:id="@+id/step_bubble" style="@style/Step" />
             <TextView style="@style/Note" android:paddingTop="8dp"
-                android:text="If Android says the setting is restricted: open Yap's App info, tap ⋮, choose “Allow restricted settings”, then try again." />
+                android:text="If Android says the setting is restricted: open Ramble's App info, tap ⋮, choose “Allow restricted settings”, then try again." />
         </LinearLayout>
 
         <EditText android:id="@+id/try_it" style="@style/Field"

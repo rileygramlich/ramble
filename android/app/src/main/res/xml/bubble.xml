@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Yap only needs to know when a text box gets the cursor, and to put text into it. -->
+<!-- Ramble only needs to know when a text box gets the cursor, and to put text into it. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/bubble_description"
     android:accessibilityEventTypes="typeViewFocused|typeViewClicked|typeWindowStateChanged|typeWindowsChanged"

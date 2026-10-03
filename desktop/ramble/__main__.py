@@ -1,10 +1,11 @@
-"""yap: private, free, on-device dictation.
+"""ramble: free, private, on-device dictation.
 
-  yap              run it (hold the hotkey to talk)
-  yap file AUDIO   transcribe and tidy an audio file, and print the result
-  yap check        test the microphone, the model, and Ollama
-  yap serve [HOST] transcribe and tidy audio for the phone (see serve.py)
-  yap init         write an example config to ~/.config/yap/config.toml
+  ramble              run it (hold the hotkey to talk)
+  ramble file AUDIO   transcribe and tidy an audio file, and print the result
+  ramble check        test the microphone, the model, and Ollama
+  ramble serve [HOST] transcribe and tidy audio for your phone (see serve.py)
+  ramble init         write an example config file
+  ramble version      print the version
 """
 from __future__ import annotations
 
@@ -20,8 +21,28 @@ from . import config as cfg
 from .transcribe import SAMPLE_RATE
 
 
+def _quiet_launch_log() -> None:
+    """Started without a console (Windows pythonw, a login item): write output to a log file."""
+    if sys.stdout is None or sys.stderr is None:
+        cfg.DATA_DIR.mkdir(parents=True, exist_ok=True)
+        log = open(cfg.DATA_DIR / "ramble.log", "a", buffering=1, encoding="utf-8")
+        sys.stdout = sys.stdout or log
+        sys.stderr = sys.stderr or log
+
+
 def main(argv: list[str] = sys.argv[1:]) -> None:
+    _quiet_launch_log()
     command = argv[0] if argv else "run"
+    if command in ("version", "--version"):
+        from importlib.metadata import PackageNotFoundError, version
+        try:
+            print(f"ramble {version('ramble')}")
+        except PackageNotFoundError:
+            print("ramble (not installed as a package)")
+        return
+    if command in ("help", "--help", "-h"):
+        print(__doc__)
+        return
     config = cfg.load()
     if command == "run":
         from .app import Dictation
@@ -40,7 +61,7 @@ def main(argv: list[str] = sys.argv[1:]) -> None:
         if cfg.CONFIG_FILE.exists():
             sys.exit(f"{cfg.CONFIG_FILE} already exists.")
         cfg.CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        cfg.CONFIG_FILE.write_text(cfg.EXAMPLE)
+        cfg.CONFIG_FILE.write_text(cfg.EXAMPLE, encoding="utf-8")
         print(f"Wrote {cfg.CONFIG_FILE}")
     else:
         sys.exit(__doc__)
@@ -48,7 +69,7 @@ def main(argv: list[str] = sys.argv[1:]) -> None:
 
 def read_audio(path: str) -> np.ndarray:
     if not shutil.which("ffmpeg"):
-        sys.exit("Reading audio files needs ffmpeg (brew install ffmpeg).")
+        sys.exit("Reading audio files needs ffmpeg (Mac: brew install ffmpeg, Windows: winget install ffmpeg, Linux: your package manager).")
     raw = subprocess.run(
         ["ffmpeg", "-nostdin", "-loglevel", "error", "-i", path, "-f", "f32le", "-ac", "1", "-ar", str(SAMPLE_RATE), "-"],
         capture_output=True, check=True,

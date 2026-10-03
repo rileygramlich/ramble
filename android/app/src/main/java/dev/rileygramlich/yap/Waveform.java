@@ -8,7 +8,7 @@ import android.view.View;
 
 /**
  * The bars in the bubble's pill. While listening they scroll left with your
- * voice, newest on the right; while Yap is writing they ripple on their own.
+ * voice, newest on the right; while Ramble is writing they ripple on their own.
  */
 final class Waveform extends View {
     private static final int BARS = 18;

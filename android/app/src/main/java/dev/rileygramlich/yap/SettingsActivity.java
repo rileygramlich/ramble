@@ -16,7 +16,7 @@ import android.widget.Toast;
 
 import static dev.rileygramlich.yap.SetupActivity.mark;
 
-/** The steps to turn Yap on (bubble or keyboard), plus where speech and tidy-up happen. */
+/** The steps to turn Ramble on (bubble or keyboard), plus where speech and tidy-up happen. */
 public class SettingsActivity extends Activity {
     private Button micStep, bubbleStep, enableStep, switchStep;
     private EditText speech, url, model, vocabulary;
@@ -43,7 +43,7 @@ public class SettingsActivity extends Activity {
         switchStep.setOnClickListener(v -> getSystemService(InputMethodManager.class).showInputMethodPicker());
 
         findViewById(R.id.diag_copy).setOnClickListener(v -> {
-            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Yap report", report()));
+            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Ramble report", report()));
             if (Build.VERSION.SDK_INT < 33) Toast.makeText(this, "Report copied", Toast.LENGTH_SHORT).show();
         });
         findViewById(R.id.diag_clear).setOnClickListener(v -> { Diagnostics.clear(this); showDiagnostics(); });
@@ -80,9 +80,9 @@ public class SettingsActivity extends Activity {
     private String deviceInfo() {
         String version = "?";
         try { version = getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception ignored) {}
-        return "Yap " + version + " · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
+        return "Ramble " + version + " · " + Build.MANUFACTURER + " " + Build.MODEL + " · Android " + Build.VERSION.RELEASE
                 + " · bubble " + (SetupActivity.isBubbleOn(this) ? "on" : "off")
-                + " · keyboard " + (SetupActivity.isKeyboardCurrent(this) ? "Yap" : "other");
+                + " · keyboard " + (SetupActivity.isKeyboardCurrent(this) ? "Ramble" : "other");
     }
 
     private String report() {
@@ -99,8 +99,8 @@ public class SettingsActivity extends Activity {
     private void refresh() {
         showDiagnostics();
         mark(micStep, SetupActivity.hasMic(this), "Allow the microphone");
-        mark(bubbleStep, SetupActivity.isBubbleOn(this), "Turn on the Yap bubble");
-        mark(enableStep, SetupActivity.isKeyboardEnabled(this), "Turn on the Yap keyboard");
-        mark(switchStep, SetupActivity.isKeyboardCurrent(this), "Switch to Yap");
+        mark(bubbleStep, SetupActivity.isBubbleOn(this), "Turn on the Ramble bubble");
+        mark(enableStep, SetupActivity.isKeyboardEnabled(this), "Turn on the Ramble keyboard");
+        mark(switchStep, SetupActivity.isKeyboardCurrent(this), "Switch to Ramble");
     }
 }

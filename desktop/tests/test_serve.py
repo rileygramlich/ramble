@@ -1,12 +1,12 @@
-"""`yap serve` end to end, with a stand-in for Whisper."""
+"""`ramble serve` end to end, with a stand-in for Whisper."""
 import json
 import threading
 import urllib.request
 import numpy as np
 import pytest
 
-from yap import serve as serve_module
-from yap.config import Config
+from ramble import serve as serve_module
+from ramble.config import Config
 
 
 class FakeWhisper:

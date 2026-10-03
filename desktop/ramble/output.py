@@ -6,7 +6,7 @@ afterwards so dictating doesn't cost you what you'd copied.
 
 If the cursor wasn't in a text box (you clicked away while talking), the
 dictation stays on the clipboard instead, like Wispr Flow, so it isn't lost.
-Only macOS can tell us that; elsewhere Yap assumes there was a text box.
+Only macOS can tell us that; elsewhere Ramble assumes there was a text box.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ import shutil
 import subprocess
 import time
 
-from .config import IS_MAC
+from .config import IS_MAC, IS_WINDOWS
 
 
 TEXT_ROLES = {"AXTextField", "AXTextArea", "AXComboBox", "AXSearchField"}
@@ -59,7 +59,7 @@ def press_enter() -> None:
 def focused_text_field() -> bool | None:
     """Is the cursor in something you can type into? None if we can't tell.
 
-    On macOS this asks the Accessibility API (the permission Yap already has
+    On macOS this asks the Accessibility API (the permission Ramble already has
     for pressing ⌘V). Anything short of a clear yes counts as no there, because
     a wrong no only costs the old clipboard, while a wrong yes loses the dictation.
     """
@@ -85,8 +85,32 @@ def focused_text_field() -> bool | None:
 def notify(message: str) -> None:
     print(f"  {message}", flush=True)
     if IS_MAC and shutil.which("osascript"):
-        subprocess.Popen(["osascript", "-e", f'display notification "{message}" with title "Yap"'],
+        subprocess.Popen(["osascript", "-e", f'display notification "{message}" with title "Ramble"'],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    elif IS_WINDOWS:
+        _windows_toast(message)
+    elif shutil.which("notify-send"):
+        subprocess.Popen(["notify-send", "-a", "Ramble", "Ramble", message],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def _windows_toast(message: str) -> None:
+    """A Windows notification through PowerShell, with nothing extra to install."""
+    safe = message.replace("'", "''")
+    script = (
+        "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] > $null;"
+        "$x = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02);"
+        "$t = $x.GetElementsByTagName('text'); $t.Item(0).AppendChild($x.CreateTextNode('Ramble')) > $null;"
+        f"$t.Item(1).AppendChild($x.CreateTextNode('{safe}')) > $null;"
+        "$n = [Windows.UI.Notifications.ToastNotification]::new($x);"
+        "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Ramble').Show($n)"
+    )
+    try:
+        subprocess.Popen(["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", script],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                         creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    except OSError:
+        pass
 
 
 def _press_paste() -> None:
@@ -115,7 +139,18 @@ SOUNDS = {
 }
 
 
+# Windows has its own short system sounds.
+WINDOWS_SOUNDS = {"start": "SystemAsterisk", "stop": "SystemDefault", "error": "SystemHand"}
+
+
 def sound(name: str) -> None:
+    if IS_WINDOWS:
+        try:
+            import winsound
+            winsound.PlaySound(WINDOWS_SOUNDS[name], winsound.SND_ALIAS | winsound.SND_ASYNC)
+        except (ImportError, RuntimeError):
+            pass
+        return
     player = "afplay" if IS_MAC else "paplay"
     for path in SOUNDS[name]:
         if os.path.exists(path) and shutil.which(player):

@@ -24,7 +24,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 /**
- * Yap's main screen: whether it's ready (with the two setup steps until it is),
+ * Ramble's main screen: whether it's ready (with the two setup steps until it is),
  * a box to try it in, and the history of what you've said. Everything else is
  * in Settings.
  */
@@ -74,7 +74,7 @@ public class SetupActivity extends Activity {
     private void refresh() {
         boolean mic = hasMic(this), bubble = isBubbleOn(this), keyboard = isKeyboardCurrent(this);
         mark(micStep, mic, "Allow the microphone");
-        mark(bubbleStep, bubble, "Turn on the Yap bubble");
+        mark(bubbleStep, bubble, "Turn on the Ramble bubble");
         boolean ready = mic && (bubble || keyboard);
         findViewById(R.id.setup).setVisibility(ready ? View.GONE : View.VISIBLE);
         TextView status = findViewById(R.id.ready);
@@ -82,7 +82,7 @@ public class SetupActivity extends Activity {
                 ? "Two quick steps, once."
                 : bubble
                 ? "Ready. Open any keyboard, tap the little mic above it, talk, and tap ✓."
-                : "Ready. Hold the mic on the Yap keyboard and talk.");
+                : "Ready. Hold the mic on the Ramble keyboard and talk.");
     }
 
     // -- history -----------------------------------------------------------------
@@ -122,7 +122,7 @@ public class SetupActivity extends Activity {
         row.addView(when);
 
         row.setOnClickListener(v -> {
-            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Yap", entry.text));
+            getSystemService(ClipboardManager.class).setPrimaryClip(ClipData.newPlainText("Ramble", entry.text));
             // Android 13+ shows its own "Copied" confirmation.
             if (Build.VERSION.SDK_INT < 33) Toast.makeText(this, "Copied", Toast.LENGTH_SHORT).show();
         });

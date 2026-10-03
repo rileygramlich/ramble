@@ -46,7 +46,7 @@ final class Recorder {
                 for (int i = 0; i < n; i++) sum += chunk[i] * chunk[i];
                 level.onLevel((float) Math.sqrt(sum / n));
             }
-        }, "yap-mic");
+        }, "ramble-mic");
         thread.start();
     }
 

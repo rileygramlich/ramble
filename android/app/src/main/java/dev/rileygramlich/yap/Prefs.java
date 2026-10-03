@@ -3,11 +3,11 @@ package dev.rileygramlich.yap;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-/** Yap's few settings, edited in SetupActivity. */
+/** Ramble's few settings, edited in SetupActivity. */
 final class Prefs {
     static final String DEFAULT_MODEL = "qwen2.5:1.5b";
-    /** `yap serve` on Art, the home machine, over Tailscale: speech and tidy-up in one go. */
-    static final String DEFAULT_SPEECH_URL = "http://100.112.5.58:8723";
+    /** Blank by default: everything happens on the phone until you point it at `ramble serve`. */
+    static final String DEFAULT_SPEECH_URL = "";
 
     private final SharedPreferences sp;
 
@@ -17,7 +17,7 @@ final class Prefs {
 
     /** Where to send audio first. Blank = always transcribe on the phone. */
     String speechUrl() { return sp.getString("speech_url", DEFAULT_SPEECH_URL); }
-    /** Only used when Art's speech server can't be reached. Blank = the phone's rules. */
+    /** Only used when the computer's speech server can't be reached. Blank = the phone's rules. */
     String ollamaUrl() { return sp.getString("ollama_url", ""); }
     String ollamaModel() { return sp.getString("ollama_model", DEFAULT_MODEL); }
     /** Names and jargon, comma separated, that Whisper should expect. */

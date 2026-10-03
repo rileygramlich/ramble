@@ -1,4 +1,4 @@
-"""`yap serve`: speech-to-text and tidy-up for other devices, e.g. the phone.
+"""`ramble serve`: speech-to-text and tidy-up for other devices, e.g. the phone.
 
 The phone records, sends the audio here over Tailscale, and gets tidy text back
 in one round trip. This machine runs a bigger Whisper model than a phone can,
@@ -38,7 +38,7 @@ def serve(config: Config, host: str, port: int) -> None:
 def make_server(config: Config, host: str, port: int) -> ThreadingHTTPServer:
     if not host:
         # An empty host would mean every network; tailscale ip prints nothing when it's down.
-        raise SystemExit("No address to listen on (is Tailscale up?). Give one: yap serve 100.x.y.z")
+        raise SystemExit("No address to listen on (is Tailscale up?). Give one: ramble serve 100.x.y.z")
     transcribe = Transcriber(config.engine, config.serve_model, config.language, config.vocabulary)
     print(f"Loading {transcribe.model} …", flush=True)
     transcribe.load()

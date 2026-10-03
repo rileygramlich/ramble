@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Install Yap on a Mac: the `yap` command, a small local model for tidy-up,
+# Install Ramble on a Mac: the `ramble` command, a small local model for tidy-up,
 # and a login item so it's always running. Safe to run again to update.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-LABEL="dev.rileygramlich.yap"
+LABEL="dev.rileygramlich.ramble"
+OLD_LABEL="dev.rileygramlich.yap"  # from when it was called Yap
 PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
-LOG="$HOME/Library/Logs/yap.log"
+LOG="$HOME/Library/Logs/ramble.log"
 MODEL="qwen2.5:1.5b"
 
 [[ "$(uname)" == "Darwin" ]] || { echo "This installer is for macOS."; exit 1; }
-[[ "$(uname -m)" == "arm64" ]] || echo "Note: Intel Mac, so Yap will use faster-whisper on the CPU (slower than Apple Silicon)."
+[[ "$(uname -m)" == "arm64" ]] || echo "Note: Intel Mac, so Ramble will use faster-whisper on the CPU (slower than Apple Silicon)."
 
 step() { printf '\n\033[1m▸ %s\033[0m\n' "$*"; }
 
@@ -21,10 +22,11 @@ if ! command -v uv >/dev/null; then
 fi
 uv --version
 
-step "Yap"
+step "Ramble"
+uv tool uninstall yap >/dev/null 2>&1 || true
 uv tool install --force --python 3.12 "$HERE"
-YAP="$HOME/.local/bin/yap"
-[[ -f "$HOME/.config/yap/config.toml" ]] || "$YAP" init
+RAMBLE="$HOME/.local/bin/ramble"
+[[ -f "$HOME/.config/ramble/config.toml" || -f "$HOME/.config/yap/config.toml" ]] || "$RAMBLE" init
 
 step "Ollama + $MODEL for tidy-up"
 if ! command -v ollama >/dev/null; then
@@ -33,7 +35,7 @@ if ! command -v ollama >/dev/null; then
     brew services start ollama
   else
     echo "Install Ollama from https://ollama.com/download, open it once, then run this script again."
-    echo "(Yap still works without it: the built-in rules do the tidy-up.)"
+    echo "(Ramble still works without it: the built-in rules do the tidy-up.)"
   fi
 fi
 if command -v ollama >/dev/null; then
@@ -42,7 +44,7 @@ fi
 
 step "Downloading the speech model and checking the microphone"
 echo "macOS will ask for microphone access. Say yes."
-"$YAP" check || true
+"$RAMBLE" check || true
 
 step "Start at login"
 mkdir -p "$(dirname "$PLIST")"
@@ -52,7 +54,7 @@ cat > "$PLIST" <<EOF
 <plist version="1.0">
 <dict>
   <key>Label</key><string>$LABEL</string>
-  <key>ProgramArguments</key><array><string>$YAP</string></array>
+  <key>ProgramArguments</key><array><string>$RAMBLE</string></array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Interactive</string>
@@ -63,14 +65,16 @@ cat > "$PLIST" <<EOF
 </dict>
 </plist>
 EOF
+launchctl bootout "gui/$(id -u)/$OLD_LABEL" 2>/dev/null || true
+rm -f "$HOME/Library/LaunchAgents/$OLD_LABEL.plist"
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
-# macOS grants keyboard access per program. Yap runs as this Python binary.
-PY="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$HOME/.local/share/uv/tools/yap/bin/python")"
+# macOS grants keyboard access per program. Ramble runs as this Python binary.
+PY="$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$HOME/.local/share/uv/tools/ramble/bin/python")"
 step "Two permissions to grant (once)"
 cat <<EOF
-Yap needs to hear the hotkey and press ⌘V for you. In System Settings, add this
+Ramble needs to hear the hotkey and press ⌘V for you. In System Settings, add this
 program under both Privacy & Security → Accessibility and → Input Monitoring:
 
     $PY
@@ -83,8 +87,8 @@ echo "$PY" | pbcopy && echo "(The path is on your clipboard.)"
 
 cat <<EOF
 
-Then restart Yap:   launchctl kickstart -k gui/$(id -u)/$LABEL
+Then restart Ramble:   launchctl kickstart -k gui/$(id -u)/$LABEL
 
 Hold Right Option (⌥) to talk and let go to paste. Tap it for hands-free.
-Log: $LOG   Settings: ~/.config/yap/config.toml
+Log: $LOG   Settings: ~/.config/ramble/config.toml
 EOF

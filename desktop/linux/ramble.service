@@ -1,0 +1,16 @@
+# Start Ramble at login. From the desktop/ folder, install with:
+#   ln -s "$PWD/linux/ramble.service" ~/.config/systemd/user/ && systemctl --user enable --now ramble
+# (Change WorkingDirectory if your clone isn't at ~/ramble/desktop.)
+[Unit]
+Description=Ramble dictation
+PartOf=graphical-session.target
+After=graphical-session.target ydotool.service ollama.service
+
+[Service]
+WorkingDirectory=%h/ramble/desktop
+ExecStart=%h/.local/bin/uv run --frozen ramble
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

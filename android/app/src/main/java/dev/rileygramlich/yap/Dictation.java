@@ -16,14 +16,15 @@ import java.nio.ByteOrder;
 /**
  * Audio in, tidy text out. Shared by the keyboard and the bubble.
  *
- * Art first: the audio goes over Tailscale to `yap serve` on Art, which runs a
- * much bigger Whisper than a phone can and the tidy-up next to it. If Art doesn't
- * answer, the phone does it all itself, and doesn't try Art again for a minute
+ * Your computer first, if you've set one up: the audio goes over Tailscale to
+ * `ramble serve`, which runs a much bigger Whisper than a phone can and the tidy-up
+ * next to it. If it doesn't answer, the phone does it all itself, and doesn't try the
+ * computer again for a minute
  * so you're not kept waiting on every dictation while you're away from home.
  */
 final class Dictation {
-    private static final int CONNECT_MS = 1500, RETRY_ART_MS = 60_000;
-    private static volatile long skipArtUntil;
+    private static final int CONNECT_MS = 1500, RETRY_SERVER_MS = 60_000;
+    private static volatile long skipServerUntil;
 
     private Dictation() {}
 
@@ -42,12 +43,12 @@ final class Dictation {
     /** Slow: call it off the main thread. */
     static Result run(Context context, float[] audio) throws Exception {
         Prefs prefs = new Prefs(context);
-        String art = prefs.speechUrl();
-        if (!art.isEmpty() && SystemClock.elapsedRealtime() >= skipArtUntil) {
+        String server = prefs.speechUrl();
+        if (!server.isEmpty() && SystemClock.elapsedRealtime() >= skipServerUntil) {
             try {
-                return onArt(art, audio, prefs.vocabulary());
+                return onServer(server, audio, prefs.vocabulary());
             } catch (Exception e) {
-                skipArtUntil = SystemClock.elapsedRealtime() + RETRY_ART_MS;
+                skipServerUntil = SystemClock.elapsedRealtime() + RETRY_SERVER_MS;
             }
         }
         String[] spoken = Cleanup.command(Whisper.run(context, audio, prefs.vocabulary()));
@@ -55,7 +56,7 @@ final class Dictation {
         return new Result(text, spoken[1]);
     }
 
-    private static Result onArt(String url, float[] audio, String vocabulary) throws Exception {
+    private static Result onServer(String url, float[] audio, String vocabulary) throws Exception {
         ByteBuffer pcm = ByteBuffer.allocate(audio.length * 2).order(ByteOrder.LITTLE_ENDIAN);
         for (float s : audio) pcm.putShort((short) Math.max(-32768, Math.min(32767, Math.round(s * 32767))));
 
@@ -68,7 +69,7 @@ final class Dictation {
             c.setRequestProperty("Content-Type", "application/octet-stream");
             c.setRequestProperty("X-Yap-Vocabulary", URLEncoder.encode(vocabulary, "UTF-8"));
             c.getOutputStream().write(pcm.array());
-            if (c.getResponseCode() != 200) throw new IllegalStateException("Art said " + c.getResponseCode());
+            if (c.getResponseCode() != 200) throw new IllegalStateException("The speech server said " + c.getResponseCode());
             JSONObject reply = new JSONObject(readAll(c.getInputStream()));
             return new Result(reply.getString("text"), reply.isNull("action") ? null : reply.optString("action", null));
         } finally {
@@ -100,6 +101,6 @@ final class Dictation {
                 c.disconnect();
             } catch (Exception ignored) {
             }
-        }, "yap-warm").start();
+        }, "ramble-warm").start();
     }
 }

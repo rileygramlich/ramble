@@ -14,7 +14,7 @@ import java.util.Locale;
  * so a problem can be reported without a cable or adb. Never stores what you said.
  */
 final class Diagnostics {
-    private static final String TAG = "Yap";
+    private static final String TAG = "Ramble";
     private static final int KEEP = 60;
 
     private Diagnostics() {}
