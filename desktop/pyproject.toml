@@ -1,6 +1,6 @@
 [project]
 name = "ramble"
-version = "0.6.0"
+version = "0.7.0"
 description = "Free, private, open-source dictation for every device: hold a key (or tap the bubble), talk, and it types."
 license = "MIT"
 requires-python = ">=3.11,<3.14"
