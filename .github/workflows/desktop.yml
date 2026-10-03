@@ -1,0 +1,37 @@
+name: Desktop
+
+# Install and test the desktop app on all three systems, including Windows,
+# which no maintainer machine runs.
+on:
+  push:
+    branches: [main]
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+  pull_request:
+    paths: ["desktop/**", ".github/workflows/desktop.yml"]
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Audio library (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libportaudio2
+      - name: Install
+        run: uv sync --frozen --python 3.12
+      - name: Tests
+        run: uv run --frozen pytest -q
+      - name: Command works
+        run: |
+          uv run --frozen ramble version
+          uv run --frozen ramble help
+      - name: Every module imports
+        run: uv run --frozen python -c "import ramble.app, ramble.audio, ramble.cleanup, ramble.config, ramble.output, ramble.serve, ramble.transcribe; print('ok')"
