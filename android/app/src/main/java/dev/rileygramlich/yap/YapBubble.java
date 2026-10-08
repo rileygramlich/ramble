@@ -109,8 +109,8 @@ public class YapBubble extends AccessibilityService {
         bubble.addView(cancelButton, new LinearLayout.LayoutParams(dp(BUTTON_DP), dp(BUTTON_DP)));
 
         wave = new Waveform(this, ink);
-        LinearLayout.LayoutParams waveSize = new LinearLayout.LayoutParams(0, dp(18), 1f);
-        waveSize.setMargins(dp(8), 0, dp(8), 0);
+        LinearLayout.LayoutParams waveSize = new LinearLayout.LayoutParams(0, dp(30), 1f);
+        waveSize.setMargins(dp(6), 0, dp(6), 0);
         bubble.addView(wave, waveSize);
 
         doneButton = button(R.drawable.ic_bubble_done, "Done");
