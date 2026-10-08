@@ -154,7 +154,10 @@ public class YapKeyboard extends InputMethodService {
         InputConnection ic = getCurrentInputConnection();
         if (ic == null) return;
         CharSequence before = ic.getTextBeforeCursor(1, 0);
-        boolean needsSpace = before != null && before.length() > 0 && !Character.isWhitespace(before.charAt(0));
+        boolean attaches = Cleanup.attaches(text);
+        // A lone "." or "?" joins the word before it, taking the place of the space after it.
+        if (attaches && before != null && before.length() > 0 && before.charAt(0) == ' ') ic.deleteSurroundingText(1, 0);
+        boolean needsSpace = !attaches && before != null && before.length() > 0 && !Character.isWhitespace(before.charAt(0));
         ic.commitText((needsSpace ? " " : "") + text, 1);
     }
 

@@ -41,10 +41,31 @@
         <EditText android:id="@+id/ollama_model" style="@style/Field"
             android:hint="qwen2.5:1.5b" android:inputType="text" />
 
-        <TextView style="@style/Heading" android:text="Words to get right" />
-        <TextView style="@style/Note" android:text="Names and jargon, separated by commas." />
-        <EditText android:id="@+id/vocabulary" style="@style/Field" android:singleLine="false"
-            android:hint="Ada Lovelace, Kubernetes, Tailscale" android:inputType="textMultiLine" />
+        <TextView style="@style/Heading" android:text="Dictionary" />
+        <TextView style="@style/Note"
+            android:text="Names and words to spell right. To fix a word it keeps mishearing, or for your own shortcuts and emoji, fill in what to type instead: say “orthodox cross emoji”, type ☦️." />
+        <LinearLayout android:id="@+id/dictionary_list" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="vertical" android:paddingTop="6dp" />
+        <EditText android:id="@+id/dictionary_say" style="@style/Field"
+            android:hint="Word, or what you say" android:inputType="text" android:imeOptions="actionNext" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" android:orientation="horizontal" android:gravity="center_vertical">
+            <EditText android:id="@+id/dictionary_type" style="@style/Field"
+                android:layout_width="0dp" android:layout_weight="1" android:layout_marginTop="0dp"
+                android:hint="Type instead (optional)" android:inputType="text" android:imeOptions="actionDone" />
+            <Button android:id="@+id/dictionary_add" style="@style/Step"
+                android:layout_width="wrap_content" android:layout_height="52dp"
+                android:layout_marginStart="10dp" android:layout_marginTop="0dp"
+                android:minHeight="0dp" android:minWidth="76dp" android:gravity="center"
+                android:text="Add" android:contentDescription="Add to the dictionary" />
+        </LinearLayout>
+
+        <TextView style="@style/Heading" android:text="Spoken punctuation" />
+        <Switch android:id="@+id/spoken_punctuation" style="@style/Note"
+            android:layout_marginTop="6dp" android:minHeight="48dp" android:textSize="16sp"
+            android:textColor="@color/ink" android:text="Turn “period”, “comma” and “question mark” into symbols" />
+        <TextView style="@style/Note"
+            android:text="“Haha” ends without a period unless you say one: “haha period” types “Haha.”. “A period of time” stays as words. Emoji work too, switch or not: “laughing emoji” 😂, “heart emoji” ❤️, “thumbs up emoji” 👍, “fire emoji” 🔥." />
 
         <TextView style="@style/Heading" android:text="Diagnostics" />
         <TextView style="@style/Note"

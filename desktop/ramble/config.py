@@ -58,6 +58,10 @@ class Config:
 
     # Names and jargon Whisper should expect and the tidy-up must not "correct".
     vocabulary: list[str] = field(default_factory=list)
+    # Say this, type that: a word Whisper keeps mishearing, a shortcut, or your own emoji.
+    replacements: dict[str, str] = field(default_factory=dict)
+    # "haha period" → "haha.", "is that right question mark" → "is that right?"
+    spoken_punctuation: bool = True
 
     # `ramble serve`: the model used for other devices' audio, and where to listen.
     # Bigger than the default because this machine has the time the phone doesn't.
@@ -97,4 +101,11 @@ EXAMPLE = """\
 
 # Words Whisper tends to get wrong: names, products, jargon.
 vocabulary = ["Tailscale", "Kubernetes", "Ada Lovelace"]
+
+# spoken_punctuation = true # "haha period" → "haha.", "comma", "question mark"…
+
+# Say this, type that. Built in: "laughing emoji" → 😂, "heart emoji" → ❤️ and more.
+# [replacements]
+# "rambl" = "Ramble"
+# "orthodox cross emoji" = "☦️"
 """

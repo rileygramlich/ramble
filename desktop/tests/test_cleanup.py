@@ -19,6 +19,77 @@ def test_rules(raw, want):
     assert rules(raw) == want
 
 
+@pytest.mark.parametrize("raw, want", [
+    ("haha period", "Haha."),
+    ("Haha, period.", "Haha."),
+    ("Haha. Period.", "Haha."),
+    ("Is that right, question mark?", "Is that right?"),
+    ("hi comma how are you", "Hi, how are you"),
+    ("Wow exclamation point that's great", "Wow! That's great"),
+    ("Dear Sam colon new line thanks", "Dear Sam:\nThanks"),
+    ("Well dot dot dot I guess", "Well… I guess"),
+    # The word, not the symbol
+    ("We have a period of time to finish", "We have a period of time to finish"),
+    ("The grace period ends Friday", "The grace period ends Friday"),
+    ("the Oxford comma is good", "The Oxford comma is good"),
+])
+def test_spoken_punctuation(raw, want):
+    assert rules(raw) == want
+
+
+@pytest.mark.parametrize("raw, want", [
+    ("Haha.", "Haha"),
+    ("That's so funny, haha.", "That's so funny, haha"),
+    ("Ha ha.", "Ha ha"),
+    ("lol.", "Lol"),
+    ("Hahaha!", "Hahaha!"),             # only the period goes
+    ("Haha. See you there.", "Haha. See you there."),
+    ("haha period", "Haha."),           # unless you say it
+    ("Haha. Period.", "Haha."),
+    ("Bahaha is not a laugh word.", "Bahaha is not a laugh word."),
+])
+def test_no_period_after_a_final_haha(raw, want):
+    assert rules(raw) == want
+
+
+def test_polish_doesnt_put_the_period_back_after_haha(monkeypatch):
+    monkeypatch.setattr(cleanup, "_ask", lambda text, *a: text if text[-1] in ".!?" else text + ".")
+    assert cleanup.polish("that is so funny haha", url="x", model="m") == "That is so funny haha"
+    assert cleanup.polish("that is so funny haha period", url="x", model="m") == "That is so funny haha."
+
+
+def test_spoken_punctuation_on_its_own_finishes_what_is_already_typed():
+    assert rules("period") == "."
+    assert rules("Period. That's it.") == ". That's it."
+    assert rules("") == "" and rules("um") == ""
+
+
+def test_spoken_punctuation_can_be_turned_off():
+    assert rules("haha period", punctuation=False) == "Haha period"
+
+
+@pytest.mark.parametrize("raw, want", [
+    ("that's hilarious laughing emoji", "That's hilarious 😂"),
+    ("Thanks, heart emoji.", "Thanks ❤️"),
+    ("Sounds good thumbs up emoji see you", "Sounds good 👍 see you"),
+    ("I like the heart-eyes emoji", "I like the 😍"),
+])
+def test_spoken_emoji(raw, want):
+    assert rules(raw) == want
+
+
+def test_your_own_replacements_win_and_match_whole_words():
+    pairs = {"rambl": "Ramble", "orthodox cross emoji": "☦️", "heart emoji": "💙"}
+    assert rules("Ask Rambl about it, Orthodox cross emoji", replacements=pairs) == "Ask Ramble about it ☦️"
+    assert rules("ramblings are fine heart emoji", replacements=pairs) == "Ramblings are fine 💙"
+    assert rules("Thanks, heart emoji.", replacements=pairs) == "Thanks 💙"
+
+
+def test_polish_keeps_a_leading_symbol_away_from_the_model(monkeypatch):
+    monkeypatch.setattr(cleanup, "_ask", lambda text, *a: text.replace("ok", "okay"))
+    assert cleanup.polish("period that is ok with me", url="x", model="m") == ". That is okay with me"
+
+
 def test_words_that_merely_contain_fillers_survive():
     assert rules("The umbrella and the hummus are on the humble drum") == "The umbrella and the hummus are on the humble drum"
 

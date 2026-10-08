@@ -46,17 +46,18 @@ final class Dictation {
         String server = prefs.speechUrl();
         if (!server.isEmpty() && SystemClock.elapsedRealtime() >= skipServerUntil) {
             try {
-                return onServer(server, audio, prefs.vocabulary());
+                return onServer(server, audio, prefs);
             } catch (Exception e) {
                 skipServerUntil = SystemClock.elapsedRealtime() + RETRY_SERVER_MS;
             }
         }
         String[] spoken = Cleanup.command(Whisper.run(context, audio, prefs.vocabulary()));
-        String text = spoken[0].isEmpty() ? "" : Polish.run(spoken[0], prefs.ollamaUrl(), prefs.ollamaModel(), prefs.vocabulary(), 4000);
+        String text = spoken[0].isEmpty() ? "" : Polish.run(spoken[0], prefs.ollamaUrl(), prefs.ollamaModel(), prefs.vocabulary(), 4000,
+                prefs.spokenPunctuation(), prefs.replacements());
         return new Result(text, spoken[1]);
     }
 
-    private static Result onServer(String url, float[] audio, String vocabulary) throws Exception {
+    private static Result onServer(String url, float[] audio, Prefs prefs) throws Exception {
         ByteBuffer pcm = ByteBuffer.allocate(audio.length * 2).order(ByteOrder.LITTLE_ENDIAN);
         for (float s : audio) pcm.putShort((short) Math.max(-32768, Math.min(32767, Math.round(s * 32767))));
 
@@ -67,7 +68,9 @@ final class Dictation {
             c.setDoOutput(true);
             c.setFixedLengthStreamingMode(pcm.capacity());
             c.setRequestProperty("Content-Type", "application/octet-stream");
-            c.setRequestProperty("X-Yap-Vocabulary", URLEncoder.encode(vocabulary, "UTF-8"));
+            c.setRequestProperty("X-Yap-Vocabulary", URLEncoder.encode(prefs.vocabulary(), "UTF-8"));
+            c.setRequestProperty("X-Yap-Replacements", URLEncoder.encode(new JSONObject(prefs.replacements()).toString(), "UTF-8"));
+            c.setRequestProperty("X-Yap-Punctuation", prefs.spokenPunctuation() ? "on" : "off");
             c.getOutputStream().write(pcm.array());
             if (c.getResponseCode() != 200) throw new IllegalStateException("The speech server said " + c.getResponseCode());
             JSONObject reply = new JSONObject(readAll(c.getInputStream()));

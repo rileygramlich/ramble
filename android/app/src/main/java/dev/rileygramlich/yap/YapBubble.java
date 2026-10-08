@@ -468,7 +468,8 @@ public class YapBubble extends AccessibilityService {
 
     /**
      * Commit the text through the accessibility input connection (Android 13+, needs
-     * flagInputMethodEditor). Adds a space first if the cursor sits right after a word.
+     * flagInputMethodEditor). Adds a space first if the cursor sits right after a word;
+     * a lone "." or "?" instead joins the word, taking the place of the space after it.
      * False if there's no connection, e.g. no box is focused or the Android is older.
      */
     private boolean typeLikeAKeyboard(String text) {
@@ -482,7 +483,11 @@ public class YapBubble extends AccessibilityService {
             SurroundingText around = ic.getSurroundingText(1, 0, 0);
             if (around != null && around.getSelectionStart() > 0) {
                 char prev = around.getText().charAt(around.getSelectionStart() - 1);
-                if (!Character.isWhitespace(prev)) piece = " " + text;
+                if (Cleanup.attaches(text)) {
+                    if (prev == ' ') ic.deleteSurroundingText(1, 0);
+                } else if (!Character.isWhitespace(prev)) {
+                    piece = " " + text;
+                }
             }
             ic.commitText(piece, 1, null);
             return true;
@@ -591,7 +596,9 @@ public class YapBubble extends AccessibilityService {
         int start = field.getTextSelectionStart(), end = field.getTextSelectionEnd();
         if (start < 0 || start > current.length()) start = end = current.length();
         end = Math.max(start, Math.min(end, current.length()));
-        boolean needsSpace = start > 0 && !Character.isWhitespace(current.charAt(start - 1));
+        boolean attaches = Cleanup.attaches(text);
+        if (attaches && start > 0 && current.charAt(start - 1) == ' ') start--; // "Haha " + "." → "Haha."
+        boolean needsSpace = !attaches && start > 0 && !Character.isWhitespace(current.charAt(start - 1));
         String piece = (needsSpace ? " " : "") + text;
         String updated = current.subSequence(0, start) + piece + current.subSequence(end, current.length());
 
