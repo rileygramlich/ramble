@@ -15,6 +15,14 @@ dependencies = [
   "pyobjc-framework-Cocoa; sys_platform == 'darwin'",  # the Mac bubble
 ]
 
+[project.optional-dependencies]
+# NVIDIA GPUs on Linux and Windows: CUDA's maths libraries, so Whisper runs on the
+# card (about 13x faster for large-v3-turbo). Install with: uv sync --extra gpu
+gpu = [
+  "nvidia-cublas-cu12; sys_platform != 'darwin'",
+  "nvidia-cudnn-cu12==9.*; sys_platform != 'darwin'",
+]
+
 [project.scripts]
 ramble = "ramble.__main__:main"
 # The old name, so existing installs and services keep working.

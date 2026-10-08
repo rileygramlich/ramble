@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Ramble only needs to know when a text box gets the cursor, and to put text into it. -->
+<!-- Ramble only needs to know when a text box gets the cursor, and to put text into it.
+     flagInputMethodEditor (Android 13+) lets it type through the box's input connection, like a keyboard. -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/bubble_description"
     android:accessibilityEventTypes="typeViewFocused|typeViewClicked|typeWindowStateChanged|typeWindowsChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagRetrieveInteractiveWindows"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows|flagInputMethodEditor"
     android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
     android:settingsActivity="dev.rileygramlich.yap.SettingsActivity" />

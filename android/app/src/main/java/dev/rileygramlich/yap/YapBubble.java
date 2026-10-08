@@ -2,6 +2,7 @@ package dev.rileygramlich.yap;
 
 import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.InputMethod;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ClipboardManager;
@@ -30,6 +31,7 @@ import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
+import android.view.inputmethod.SurroundingText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
@@ -107,8 +109,8 @@ public class YapBubble extends AccessibilityService {
         bubble.addView(cancelButton, new LinearLayout.LayoutParams(dp(BUTTON_DP), dp(BUTTON_DP)));
 
         wave = new Waveform(this, ink);
-        LinearLayout.LayoutParams waveSize = new LinearLayout.LayoutParams(0, dp(18), 1f);
-        waveSize.setMargins(dp(8), 0, dp(8), 0);
+        LinearLayout.LayoutParams waveSize = new LinearLayout.LayoutParams(0, dp(30), 1f);
+        waveSize.setMargins(dp(6), 0, dp(6), 0);
         bubble.addView(wave, waveSize);
 
         doneButton = button(R.drawable.ic_bubble_done, "Done");
@@ -417,22 +419,82 @@ public class YapBubble extends AccessibilityService {
      */
     private void insert(String text, java.util.function.Consumer<Boolean> done) {
         AccessibilityNodeInfo field = focusedField();
+        CharSequence current = null;
+        int before = -1;
+        if (field != null) {
+            field.refresh();
+            current = field.isPassword() ? null : field.getText();
+            boolean placeholder = current != null && isPlaceholder(field, current);
+            if (placeholder) current = "";
+            before = current == null ? -1 : current.length();
+            diag("box: " + field.getClassName() + " in " + field.getPackageName() + ", " + (current == null ? "text unreadable" : before + " chars")
+                    + ", cursor " + field.getTextSelectionStart() + (placeholder ? ", showing placeholder" : ""));
+        } else {
+            diag("no text box visible to accessibility");
+        }
+
+        // 1. Android 13+: type through the box's own input connection, exactly like a keyboard.
+        //    Works in apps whose boxes ignore the accessibility actions below (Compose, web views).
+        if (typeLikeAKeyboard(text)) {
+            if (field == null) {
+                diag("typed through the keyboard connection (can't re-read this box to check)");
+                done.accept(true);
+                return;
+            }
+            final AccessibilityNodeInfo f = field;
+            final CharSequence cur = current;
+            final int b = before;
+            main.postDelayed(() -> {
+                if (stuck(f, text, b)) {
+                    diag("typed through the keyboard connection: stuck");
+                    done.accept(true);
+                } else {
+                    diag("keyboard connection didn't stick, typing directly instead");
+                    typeDirectlyOrPaste(f, cur, text, b, done);
+                }
+            }, VERIFY_MS);
+            return;
+        }
+
         if (field == null) {
-            diag("no focused text box found, copied instead");
+            diag("no keyboard connection either, copied instead");
             copy(text.trim());
             toast("Copied: no text box had the cursor");
             done.accept(false);
             return;
         }
-        field.refresh();
-        CharSequence current = field.isPassword() ? null : field.getText();
-        boolean placeholder = current != null && isPlaceholder(field, current);
-        if (placeholder) current = "";
-        int before = current == null ? -1 : current.length();
-        diag("box: " + field.getClassName() + " in " + field.getPackageName() + ", " + (current == null ? "text unreadable" : before + " chars")
-                + ", cursor " + field.getTextSelectionStart() + (placeholder ? ", showing placeholder" : ""));
+        typeDirectlyOrPaste(field, current, text, before, done);
+    }
 
-        // 1. Set the text ourselves, when we know where the cursor is.
+    /**
+     * Commit the text through the accessibility input connection (Android 13+, needs
+     * flagInputMethodEditor). Adds a space first if the cursor sits right after a word.
+     * False if there's no connection, e.g. no box is focused or the Android is older.
+     */
+    private boolean typeLikeAKeyboard(String text) {
+        if (Build.VERSION.SDK_INT < 33) return false;
+        InputMethod im = getInputMethod();
+        if (im == null) return false;
+        InputMethod.AccessibilityInputConnection ic = im.getCurrentInputConnection();
+        if (ic == null) return false;
+        String piece = text;
+        try {
+            SurroundingText around = ic.getSurroundingText(1, 0, 0);
+            if (around != null && around.getSelectionStart() > 0) {
+                char prev = around.getText().charAt(around.getSelectionStart() - 1);
+                if (!Character.isWhitespace(prev)) piece = " " + text;
+            }
+            ic.commitText(piece, 1, null);
+            return true;
+        } catch (RuntimeException e) {
+            diag("keyboard connection failed: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** 2. Set the text through accessibility when we know where the cursor is, else paste. */
+    private void typeDirectlyOrPaste(AccessibilityNodeInfo field, CharSequence current, String text, int before,
+                                     java.util.function.Consumer<Boolean> done) {
         boolean canSplice = current != null && (current.length() == 0 || cursorInside(field, current));
         if (canSplice && splice(field, current, text)) {
             main.postDelayed(() -> {
@@ -450,7 +512,7 @@ public class YapBubble extends AccessibilityService {
         pasteThenCheck(field, text, before, done);
     }
 
-    /** 2. Paste, check, and as a last resort leave the text on the clipboard and say so. */
+    /** 3. Paste, check, and as a last resort leave the text on the clipboard and say so. */
     private void pasteThenCheck(AccessibilityNodeInfo field, String text, int before, java.util.function.Consumer<Boolean> done) {
         ClipboardManager clipboard = getSystemService(ClipboardManager.class);
         ClipData previous = clipboard.getPrimaryClip(); // null when Android won't let Ramble read it
