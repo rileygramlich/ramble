@@ -6,6 +6,8 @@ and the Ollama tidy-up next to it. Nothing leaves your tailnet.
 
     POST /dictate   body: 16 kHz mono 16-bit little-endian PCM
                     header X-Yap-Vocabulary: comma-separated names (URL-encoded)
+                    header X-Yap-Replacements: {"say": "type", ...} as URL-encoded JSON
+                    header X-Yap-Punctuation: on|off, for spoken punctuation
                     → {"raw": ..., "text": ..., "action": "enter"|"send"|null, "took": seconds}
     GET  /health    → {"ok": true, "model": ...}
 
@@ -59,12 +61,20 @@ def make_server(config: Config, host: str, port: int) -> ThreadingHTTPServer:
             audio = np.frombuffer(self.rfile.read(size), dtype="<i2").astype(np.float32) / 32768
             words = urllib.parse.unquote_plus(self.headers.get("X-Yap-Vocabulary") or "")
             vocabulary = [w.strip() for w in words.split(",") if w.strip()]
+            try:
+                replacements = json.loads(urllib.parse.unquote_plus(self.headers.get("X-Yap-Replacements") or "{}"))
+                replacements = {str(k): str(v) for k, v in replacements.items()} if isinstance(replacements, dict) else {}
+            except ValueError:
+                replacements = {}
+            switch = (self.headers.get("X-Yap-Punctuation") or "").lower()
+            punctuation = {"on": True, "off": False}.get(switch)
             started = time.monotonic()
             with lock:
                 raw = transcribe(audio, vocabulary)
             heard = time.monotonic()
             spoken, action = cleanup.command(raw)
-            text = tidy(config, spoken, [*config.vocabulary, *vocabulary])
+            text = tidy(config, spoken, [*config.vocabulary, *vocabulary],
+                        punctuation=punctuation, replacements=replacements)
             took = round(time.monotonic() - started, 2)
             print(f"✓ {took}s (whisper {heard - started:.1f}s, tidy {time.monotonic() - heard:.1f}s)  "
                   f"{len(audio) / SAMPLE_RATE:.1f}s from {self.client_address[0]}  {text}", flush=True)

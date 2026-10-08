@@ -1,6 +1,7 @@
 """`ramble serve` end to end, with a stand-in for Whisper."""
 import json
 import threading
+import urllib.parse
 import urllib.request
 import numpy as np
 import pytest
@@ -41,6 +42,24 @@ def test_dictate_returns_tidy_text(server):
     assert body["raw"] == "um so send it to Katharina"
     assert body["text"] == "So send it to Katharina"
     assert body["action"] is None
+
+
+def test_dictate_uses_the_phones_dictionary_and_punctuation_switch(server):
+    url, _ = server
+    pcm = np.zeros(1600, dtype="<i2").tobytes()
+    headers = {"X-Yap-Replacements": urllib.parse.quote(json.dumps({"katharina": "Kat 😺"})), "X-Yap-Punctuation": "on"}
+    body = json.loads(urllib.request.urlopen(urllib.request.Request(url + "/dictate", pcm, headers)).read())
+    assert body["text"] == "So send it to Kat 😺"
+
+
+def test_dictate_turns_spoken_punctuation_off_when_the_phone_says_so(server, monkeypatch):
+    url, fake = server
+    monkeypatch.setattr(FakeWhisper, "__call__", lambda self, audio, vocabulary=(): "haha period")
+    pcm = np.zeros(1600, dtype="<i2").tobytes()
+    ask = lambda headers: json.loads(urllib.request.urlopen(urllib.request.Request(url + "/dictate", pcm, headers)).read())["text"]
+    assert ask({}) == "Haha."
+    assert ask({"X-Yap-Punctuation": "off"}) == "Haha period"
+    assert ask({"X-Yap-Replacements": "not json"}) == "Haha."
 
 
 def test_health(server):

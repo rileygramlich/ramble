@@ -49,14 +49,20 @@ class Pipeline:
         return raw, tidy(self.config, spoken), action
 
 
-def tidy(config: Config, text: str, vocabulary: list[str] | None = None) -> str:
+def tidy(config: Config, text: str, vocabulary: list[str] | None = None, *,
+         punctuation: bool | None = None, replacements: dict[str, str] | None = None) -> str:
+    """`punctuation` and `replacements` come from the phone when it sends audio; else config.toml."""
     if not text or config.cleanup == "off":
         return text
+    punctuation = config.spoken_punctuation if punctuation is None else punctuation
+    replacements = {**config.replacements, **(replacements or {})}
     if config.cleanup == "rules":
-        return cleanup.rules(text)
-    return cleanup.polish(text, url=config.ollama_url, model=config.ollama_model,
-                          vocabulary=config.vocabulary if vocabulary is None else vocabulary,
-                          timeout=config.ollama_timeout)
+        return cleanup.rules(text, punctuation=punctuation, replacements=replacements)
+    vocabulary = config.vocabulary if vocabulary is None else vocabulary
+    # What you said to type instead should come out spelled exactly that way too.
+    vocabulary = [*vocabulary, *(v for v in replacements.values() if any(c.isalpha() for c in v))]
+    return cleanup.polish(text, url=config.ollama_url, model=config.ollama_model, vocabulary=vocabulary,
+                          timeout=config.ollama_timeout, punctuation=punctuation, replacements=replacements)
 
 
 class Dictation:

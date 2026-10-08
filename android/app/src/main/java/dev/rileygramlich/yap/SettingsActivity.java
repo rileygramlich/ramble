@@ -9,17 +9,25 @@ import android.view.inputmethod.InputMethodManager;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.os.Build;
+import android.view.Gravity;
+import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.util.List;
 
 import static dev.rileygramlich.yap.SetupActivity.mark;
 
 /** The steps to turn Ramble on (bubble or keyboard), plus where speech and tidy-up happen. */
 public class SettingsActivity extends Activity {
     private Button micStep, bubbleStep, enableStep, switchStep;
-    private EditText speech, url, model, vocabulary;
+    private EditText speech, url, model, say, type;
+    private Switch punctuation;
+    private LinearLayout dictionaryList;
     private Prefs prefs;
 
     @Override
@@ -34,7 +42,16 @@ public class SettingsActivity extends Activity {
         speech = findViewById(R.id.speech_url);
         url = findViewById(R.id.ollama_url);
         model = findViewById(R.id.ollama_model);
-        vocabulary = findViewById(R.id.vocabulary);
+        say = findViewById(R.id.dictionary_say);
+        type = findViewById(R.id.dictionary_type);
+        dictionaryList = findViewById(R.id.dictionary_list);
+        punctuation = findViewById(R.id.spoken_punctuation);
+        findViewById(R.id.dictionary_add).setOnClickListener(v -> addWord());
+        type.setOnEditorActionListener((v, action, event) -> {
+            if (action != EditorInfo.IME_ACTION_DONE) return false;
+            addWord();
+            return true;
+        });
 
         findViewById(R.id.back).setOnClickListener(v -> finish());
         micStep.setOnClickListener(v -> requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 1));
@@ -51,7 +68,8 @@ public class SettingsActivity extends Activity {
         speech.setText(prefs.speechUrl());
         url.setText(prefs.ollamaUrl());
         model.setText(prefs.ollamaModel());
-        vocabulary.setText(prefs.vocabulary());
+        punctuation.setChecked(prefs.spokenPunctuation());
+        showDictionary();
     }
 
     @Override
@@ -69,12 +87,64 @@ public class SettingsActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
-        prefs.save(speech.getText().toString(), url.getText().toString(), model.getText().toString(), vocabulary.getText().toString());
+        addWord(); // something typed but not added yet shouldn't be lost
+        prefs.save(speech.getText().toString(), url.getText().toString(), model.getText().toString(), punctuation.isChecked());
     }
 
     @Override
     public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
         refresh();
+    }
+
+    /** Adds what's in the two boxes, replacing an entry for the same word. */
+    private void addWord() {
+        String said = say.getText().toString().trim(), typed = type.getText().toString().trim();
+        if (said.isEmpty()) return;
+        List<String[]> entries = prefs.dictionary();
+        entries.removeIf(e -> e[0].equalsIgnoreCase(said));
+        entries.add(new String[]{said, typed});
+        prefs.saveDictionary(entries);
+        say.setText("");
+        type.setText("");
+        say.requestFocus();
+        showDictionary();
+    }
+
+    private void showDictionary() {
+        dictionaryList.removeAllViews();
+        List<String[]> entries = prefs.dictionary();
+        for (String[] entry : entries) {
+            LinearLayout row = new LinearLayout(this);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            TextView word = new TextView(this);
+            word.setText(entry[1].isEmpty() ? entry[0] : entry[0] + "  →  " + entry[1]);
+            word.setTextSize(16);
+            word.setTextColor(getColor(R.color.ink));
+            row.addView(word, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+            TextView remove = new TextView(this);
+            remove.setText("✕");
+            remove.setTextSize(16);
+            remove.setGravity(Gravity.CENTER);
+            remove.setTextColor(getColor(R.color.ink_soft));
+            remove.setContentDescription("Remove " + entry[0]);
+            remove.setBackgroundResource(android.R.drawable.list_selector_background);
+            remove.setOnClickListener(v -> {
+                List<String[]> now = prefs.dictionary();
+                now.removeIf(e -> e[0].equals(entry[0]));
+                prefs.saveDictionary(now);
+                showDictionary();
+            });
+            int size = Math.round(44 * getResources().getDisplayMetrics().density);
+            row.addView(remove, new LinearLayout.LayoutParams(size, size));
+            dictionaryList.addView(row);
+        }
+        if (entries.isEmpty()) {
+            TextView empty = new TextView(this);
+            empty.setText("Nothing yet.");
+            empty.setTextColor(getColor(R.color.ink_soft));
+            empty.setPadding(0, 8, 0, 0);
+            dictionaryList.addView(empty);
+        }
     }
 
     private String deviceInfo() {
