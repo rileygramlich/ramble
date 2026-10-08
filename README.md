@@ -99,6 +99,7 @@ Hold **Right Ctrl**, talk, let go and it pastes; tap for hands-free. Speech runs
 - Settings: `~/.config/ramble/config.toml` (`uv run ramble init` writes an example). After editing: `systemctl --user restart ramble`
 - Log: `journalctl --user -u ramble -f`. History: `~/.local/share/ramble/history.jsonl`
 - **"can't read any keyboard in /dev/input"** in the log: you haven't logged in again since step 2. Until then the hotkey only works while an X11 app has focus.
+- **NVIDIA GPU:** install with `uv sync --extra gpu` and add `--extra gpu` after `--frozen` in the service's `ExecStart`. Whisper then runs on the card, about 13× faster (`large-v3-turbo` turns 10 s of speech into text in 0.3 s instead of 3.8 s). The log says `Speech model … on the GPU` when it's working.
 - **Nothing pastes:** check `systemctl --user status ydotool`. Terminals paste with Ctrl+Shift+V, so in a terminal press that yourself; the text is on the clipboard.
 
 ## Windows (experimental)
@@ -133,7 +134,9 @@ curl http://$(tailscale ip -4):8723/health   # {"ok": true, "model": "large-v3-t
 
 (On a Mac or Windows, run `ramble serve 100.x.y.z` with your Tailscale address.) Then, in the Ramble app on your phone, put `http://100.x.y.z:8723` under Settings → **Speech on your computer**.
 
-It listens on the Tailscale address only, on port 8723. If `ufw` is on, allow it from the tailnet: `sudo ufw allow in on tailscale0 to any port 8723`. The log shows each dictation with how long Whisper and the tidy-up took; on a laptop CPU that's about 3.5 s for 10 s of speech, and an NVIDIA GPU is several times faster. Change the model with `serve_model` in the settings.
+Use the GPU if you have one (`--extra gpu`, see Linux above): with it, a 10-second dictation comes back to the phone in about half a second, transcription and tidy-up included. If Ollama listens somewhere other than `127.0.0.1` (for example only on your Tailscale address), set `ollama_url` in the settings to match, or the tidy-up quietly falls back to the rules.
+
+It listens on the Tailscale address only, on port 8723. If `ufw` is on, allow it from the tailnet: `sudo ufw allow in on tailscale0 to any port 8723`. The log shows each dictation with how long Whisper and the tidy-up took: on a laptop CPU about 3.5 s for 10 s of speech, on an RTX 5060 laptop GPU 0.45 s in total. Change the model with `serve_model` in the settings.
 
 ## Building Ramble
 
